@@ -6,6 +6,7 @@ const config: NextConfig = {
     '@mycorp24/types',
     '@mycorp24/agent-types',
     '@mycorp24/business-logic',
+    '@mycorp24/chat',
   ],
 };
 
