@@ -529,3 +529,166 @@ export async function hasPendingApproval(
   if (error) throw new DbError('checking for a pending approval', error);
   return (data?.length ?? 0) > 0;
 }
+
+// ---------------------------------------------------------------------------
+// Company memory and the constitution — spec §138–140
+// ---------------------------------------------------------------------------
+
+/**
+ * The active memory an agent must read before acting.
+ *
+ * A founder decision outranks an agent's inference, so decisions come first:
+ * whatever truncates this list keeps the statements that were actually stated.
+ */
+export const listCompanyMemory = async (db: Db, companyId: string) =>
+  unwrap(
+    await db
+      .from('company_memory')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('active', true)
+      .order('source', { ascending: true })
+      .order('created_at', { ascending: false }),
+    'reading company memory',
+  );
+
+export const getConstitution = async (db: Db, companyId: string) => {
+  const { data, error } = await db
+    .from('company_constitution')
+    .select('*')
+    .eq('company_id', companyId)
+    .maybeSingle();
+  if (error) throw new DbError('reading the company constitution', error);
+  return data;
+};
+
+export async function rememberDecision(
+  db: Db,
+  input: {
+    readonly companyId: string;
+    readonly statement: string;
+    readonly detail?: string;
+    readonly kind?: 'BUSINESS' | 'BRAND' | 'DECISION' | 'PREFERENCE' | 'FAILURE' | 'SUCCESS';
+    readonly source?: 'FOUNDER' | 'AGENT';
+  },
+): Promise<void> {
+  const res = await db.from('company_memory').insert({
+    company_id: input.companyId,
+    kind: input.kind ?? 'DECISION',
+    statement: input.statement,
+    source: input.source ?? 'FOUNDER',
+    ...(input.detail ? { detail: input.detail } : {}),
+  });
+  if (res.error) throw new DbError('recording the decision', res.error);
+}
+
+/**
+ * Replace a decision without forgetting it was replaced.
+ *
+ * §139: a reversal is itself worth remembering — it is what stops an agent
+ * proposing the reversed thing again next quarter.
+ */
+export async function supersedeMemory(
+  db: Db,
+  oldId: string,
+  statement: string,
+  detail?: string,
+): Promise<string> {
+  const { data, error } = await db.rpc('supersede_memory', {
+    p_old: oldId,
+    p_statement: statement,
+    ...(detail ? { p_detail: detail } : {}),
+  });
+  if (error) throw new DbError('superseding the memory', error);
+  if (!data) throw new DbError('superseding the memory returned no id');
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Founder tasks — spec §163, §164
+// ---------------------------------------------------------------------------
+
+export const listOpenFounderTasks = async (db: Db, companyId: string) =>
+  unwrap(
+    await db
+      .from('founder_tasks')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('status', 'OPEN')
+      .order('created_at', { ascending: true }),
+    'listing founder tasks',
+  );
+
+export async function closeFounderTask(
+  db: Db,
+  companyId: string,
+  taskId: string,
+  status: 'DONE' | 'DROPPED',
+): Promise<void> {
+  const res = await db
+    .from('founder_tasks')
+    .update({ status, completed_at: new Date().toISOString() })
+    .eq('id', taskId)
+    .eq('company_id', companyId);
+  if (res.error) throw new DbError('closing the founder task', res.error);
+}
+
+// ---------------------------------------------------------------------------
+// Competitors and proposals — spec §157, §158, §161
+// ---------------------------------------------------------------------------
+
+export const listCompetitors = async (db: Db, companyId: string) =>
+  unwrap(
+    await db.from('competitors').select('*').eq('company_id', companyId).order('name'),
+    'listing competitors',
+  );
+
+/** Signals the founder has not been told about yet, most significant first. */
+export const listUnreportedSignals = async (db: Db, companyId: string, limit = 10) =>
+  unwrap(
+    await db
+      .from('competitor_signals')
+      .select('*')
+      .eq('company_id', companyId)
+      .is('reported_at', null)
+      .order('significance', { ascending: false })
+      .order('detected_at', { ascending: false })
+      .limit(limit),
+    'listing competitor signals',
+  );
+
+export async function markSignalsReported(db: Db, ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const res = await db
+    .from('competitor_signals')
+    .update({ reported_at: new Date().toISOString() })
+    .in('id', [...ids]);
+  if (res.error) throw new DbError('marking signals as reported', res.error);
+}
+
+export const listOpenProposals = async (db: Db, companyId: string) =>
+  unwrap(
+    await db
+      .from('proposals')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('status', 'OPEN')
+      .order('priority', { ascending: true })
+      .order('created_at', { ascending: false }),
+    'listing proposals',
+  );
+
+export async function decideProposal(
+  db: Db,
+  companyId: string,
+  proposalId: string,
+  status: 'ACCEPTED' | 'DECLINED',
+): Promise<void> {
+  const res = await db
+    .from('proposals')
+    .update({ status, decided_at: new Date().toISOString() })
+    .eq('id', proposalId)
+    .eq('company_id', companyId)
+    .eq('status', 'OPEN');
+  if (res.error) throw new DbError('deciding the proposal', res.error);
+}

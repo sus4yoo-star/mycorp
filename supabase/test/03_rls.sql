@@ -296,3 +296,118 @@ begin;
 rollback;
 
 \echo 'RLS(oauth): all checks passed'
+
+-- ---------------------------------------------------------------------------
+-- Company memory and the constitution — spec §139, §140
+-- ---------------------------------------------------------------------------
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222"}';
+
+  do $$ begin
+    insert into company_memory (company_id, kind, statement, source)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'DECISION',
+            '우리 브랜드는 가격할인을 하지 않는다', 'FOUNDER');
+    assert (select count(*) from company_memory) = 1, 'a member may record company memory';
+  end $$;
+
+  -- The constitution is the founder's statement, not a shared scratchpad.
+  do $$
+  begin
+    insert into company_constitution (company_id, principles)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '멤버가 쓴 원칙');
+    raise exception 'TEST FAILED: a non-founder wrote the company constitution';
+  exception when insufficient_privilege then null;
+  end $$;
+rollback;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$ begin
+    insert into company_constitution (company_id, principles, prohibitions)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '고객 신뢰 우선', '가격할인 금지');
+    assert (select prohibitions from company_constitution) = '가격할인 금지',
+      'the founder must be able to write the constitution';
+  end $$;
+rollback;
+
+-- A reversed decision is superseded, never deleted: knowing it was reversed is
+-- what stops an agent proposing the same thing again (§139).
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare old_id uuid; new_id uuid;
+  begin
+    insert into company_memory (company_id, kind, statement, source)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'DECISION', '할인 금지', 'FOUNDER')
+    returning id into old_id;
+
+    new_id := supersede_memory(old_id, '시즌 세일은 허용한다', '2026 여름부터');
+
+    assert (select active from company_memory where id = old_id) = false,
+      'the superseded memory must be deactivated';
+    assert (select superseded_by from company_memory where id = old_id) = new_id,
+      'the old memory must point at what replaced it';
+    assert (select count(*) from company_memory where id = old_id) = 1,
+      'the superseded memory must still exist';
+    assert (select active from company_memory where id = new_id) = true,
+      'the replacement must be active';
+  end $$;
+rollback;
+
+-- supersede_memory is security definer; it must not become a way to reach
+-- another company's memory.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare victim uuid;
+  begin
+    -- Plant a row in company B using a privileged path, then try to touch it as A.
+    insert into company_memory (company_id, kind, statement)
+    values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'BRAND', 'B사 브랜드')
+    returning id into victim;
+    raise exception 'TEST FAILED: wrote memory into another company';
+  exception when insufficient_privilege then null;
+  end $$;
+rollback;
+
+-- ---------------------------------------------------------------------------
+-- Competitors and founder tasks
+-- ---------------------------------------------------------------------------
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare c uuid;
+  begin
+    insert into competitors (company_id, name, watching)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '경쟁사 A', true)
+    returning id into c;
+
+    insert into competitor_signals (company_id, competitor_id, kind, summary, significance)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', c, 'PRICE_CHANGE', '가격 15% 인하', 5);
+
+    insert into founder_tasks (company_id, title, why_founder, estimate_minutes)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '신규 서비스 가격 결정',
+            'AI가 대신 결정할 수 없는 경영 판단입니다', 10);
+
+    assert (select count(*) from competitor_signals where reported_at is null) = 1,
+      'an unreported signal must be findable';
+    assert (select count(*) from founder_tasks where status = 'OPEN') = 1,
+      'open founder tasks must be countable';
+  end $$;
+
+  set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333"}';
+  do $$ begin
+    assert (select count(*) from competitors) = 0, 'competitors must not cross tenants';
+    assert (select count(*) from competitor_signals) = 0, 'signals must not cross tenants';
+    assert (select count(*) from founder_tasks) = 0, 'founder tasks must not cross tenants';
+  end $$;
+rollback;
+
+\echo 'RLS(memory): all checks passed'

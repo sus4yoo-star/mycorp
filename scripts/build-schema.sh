@@ -22,16 +22,28 @@ OUT="$ROOT/supabase/schema.sql"
 --   Regenerate: pnpm build:schema
 --   Source:     supabase/migrations/*.sql
 --
--- Two ways to apply this:
+-- ===========================================================================
+-- READ THIS BEFORE PASTING
+-- ===========================================================================
 --
---   1. Normally, and what CI does:
---        supabase db push
+-- This file is for a database that has NEVER had the schema applied.
+-- It is not re-runnable: `create table` and `create type` fail on objects that
+-- already exist, and a half-failed paste is worse than not starting.
 --
---   2. With only a browser:
---        Supabase dashboard -> SQL Editor -> New query -> paste this file -> Run
+--   Empty database, browser only:
+--       SQL Editor -> New query -> paste this whole file -> Run
 --
--- Then verify with supabase/verify.sql. Row level security is the whole
--- security model here; a table with it switched off is wide open.
+--   Empty database, CLI (what CI does):
+--       supabase db push
+--
+--   ALREADY APPLIED, and you want the newer tables:
+--       Do NOT paste this file again.
+--       Paste only the migration files under supabase/migrations/ that you have
+--       not applied yet, in filename order. Each one is additive on its own.
+--
+-- Either way, finish by running supabase/verify.sql. It changes nothing and
+-- raises if the database is not in a safe state. Row level security is the
+-- whole security model here; a table with it switched off is wide open.
 
 HEADER
 

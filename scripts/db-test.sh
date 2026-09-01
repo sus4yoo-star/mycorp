@@ -86,6 +86,7 @@ echo "▸ applying migrations"
   -f "$ROOT/supabase/migrations/0001_init.sql" \
   -f "$ROOT/supabase/migrations/0002_found_company.sql" \
   -f "$ROOT/supabase/migrations/0003_oauth_states.sql" \
+  -f "$ROOT/supabase/migrations/0004_memory_and_proposals.sql" \
   -f "$ROOT/supabase/test/01_grants.sql" \
   -f "$ROOT/supabase/test/02_seed.sql" >/dev/null
 

@@ -135,6 +135,90 @@ export type OAuthStateRow = {
   expires_at: string;
 };
 
+export type CompanyMemoryRow = {
+  id: string;
+  company_id: string;
+  kind: 'BUSINESS' | 'BRAND' | 'DECISION' | 'PREFERENCE' | 'FAILURE' | 'SUCCESS';
+  statement: string;
+  detail: string | null;
+  source: 'FOUNDER' | 'AGENT';
+  classification: SecurityLevelRow;
+  active: boolean;
+  created_at: string;
+  superseded_by: string | null;
+};
+
+export type CompanyConstitutionRow = {
+  company_id: string;
+  principles: string | null;
+  prohibitions: string | null;
+  brand_philosophy: string | null;
+  goals: string | null;
+  budget_stance: string | null;
+  updated_at: string;
+};
+
+export type CompetitorRow = {
+  id: string;
+  company_id: string;
+  name: string;
+  website: string | null;
+  location: string | null;
+  industry: string | null;
+  social: Record<string, unknown>;
+  price_range: string | null;
+  positioning: string | null;
+  strengths: string | null;
+  weaknesses: string | null;
+  watching: boolean;
+  last_checked_at: string | null;
+  created_at: string;
+};
+
+export type CompetitorSignalRow = {
+  id: string;
+  company_id: string;
+  competitor_id: string;
+  kind: string;
+  summary: string;
+  evidence: Record<string, unknown>;
+  significance: number;
+  detected_at: string;
+  reported_at: string | null;
+};
+
+export type FounderTaskRow = {
+  id: string;
+  company_id: string;
+  title: string;
+  why_founder: string;
+  blocks: string | null;
+  status: 'OPEN' | 'DONE' | 'DROPPED';
+  estimate_minutes: number;
+  due_on: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type ProposalRow = {
+  id: string;
+  company_id: string;
+  proposal_type: string;
+  title: string;
+  background: string | null;
+  evidence: Record<string, unknown>;
+  recommendation: string | null;
+  expected_cost: string | null;
+  expected_effect: string | null;
+  risk: string | null;
+  division_key: string | null;
+  priority: number;
+  status: 'OPEN' | 'ACCEPTED' | 'DECLINED' | 'SUPERSEDED';
+  decided_at: string | null;
+  source_signal_id: string | null;
+  created_at: string;
+};
+
 export type AuditEventRow = {
   id: number;
   company_id: string;
@@ -195,6 +279,31 @@ export type Database = {
         Pick<OAuthStateRow, 'state' | 'company_id' | 'user_id' | 'provider'> &
           Partial<OAuthStateRow>
       >;
+      company_memory: Table<
+        CompanyMemoryRow,
+        Pick<CompanyMemoryRow, 'company_id' | 'kind' | 'statement'> & Partial<CompanyMemoryRow>
+      >;
+      company_constitution: Table<
+        CompanyConstitutionRow,
+        Pick<CompanyConstitutionRow, 'company_id'> & Partial<CompanyConstitutionRow>
+      >;
+      competitors: Table<
+        CompetitorRow,
+        Pick<CompetitorRow, 'company_id' | 'name'> & Partial<CompetitorRow>
+      >;
+      competitor_signals: Table<
+        CompetitorSignalRow,
+        Pick<CompetitorSignalRow, 'company_id' | 'competitor_id' | 'kind' | 'summary'> &
+          Partial<CompetitorSignalRow>
+      >;
+      founder_tasks: Table<
+        FounderTaskRow,
+        Pick<FounderTaskRow, 'company_id' | 'title' | 'why_founder'> & Partial<FounderTaskRow>
+      >;
+      proposals: Table<
+        ProposalRow,
+        Pick<ProposalRow, 'company_id' | 'proposal_type' | 'title'> & Partial<ProposalRow>
+      >;
       audit_events: Table<
         AuditEventRow,
         Pick<AuditEventRow, 'company_id' | 'actor' | 'action' | 'outcome'> & Partial<AuditEventRow>
@@ -207,6 +316,10 @@ export type Database = {
     Functions: {
       is_company_member: { Args: { target: string }; Returns: boolean };
       is_company_founder: { Args: { target: string }; Returns: boolean };
+      supersede_memory: {
+        Args: { p_old: string; p_statement: string; p_detail?: string };
+        Returns: string;
+      };
       prune_oauth_states: { Args: Record<string, never>; Returns: undefined };
       found_company: {
         Args: {

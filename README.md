@@ -65,6 +65,8 @@ AI prepares.  Founder approves.  Company executes.
 | [`docs/spec/03-proactive-social-security.md`](docs/spec/03-proactive-social-security.md) | §156–200 — 선제 제안 엔진, 경쟁사 인텔리전스, 기업 네트워크, 보안 등급 |
 | [`docs/spec/04-organization-expansion.md`](docs/spec/04-organization-expansion.md) | §201–220 — 법무·보안·기술·제품·감사·리스크·글로벌, 3선 방어, 정합성 부록 |
 
+주요 화면: `/briefing`(아침 보고) · `/chat`(비서실장) · `/approvals`(결재실) · `/connect`(연결) · `/hq`(본사)
+
 네 문서는 **하나의 Product Specification**으로 취급한다. 섹션 번호 §72–220은 연속한다.
 
 ---

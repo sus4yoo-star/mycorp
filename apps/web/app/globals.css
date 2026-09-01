@@ -238,3 +238,26 @@ footer.site { border-top: 1px solid var(--line); padding-block: 2.5rem; color: v
 }
 .decision button.ghost { background: transparent; color: var(--ink-soft); border-color: var(--line); }
 .decision button.ghost:hover { color: var(--ink); border-color: var(--ink); }
+
+/* --- morning briefing --- */
+.brief {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 1.5rem 1.75rem;
+  border-radius: 2px;
+}
+.brief-line { margin: 0 0 0.6rem; line-height: 1.65; }
+.brief-line:last-child { margin-bottom: 0; }
+.brief-line.greeting { font-size: 1.15rem; font-weight: 600; margin-bottom: 1rem; }
+.brief-line.decision { color: var(--ink); }
+.brief-line.work, .brief-line.competitor { color: var(--ink-soft); }
+.brief-line.proposal { color: var(--ink); border-left: 2px solid var(--line); padding-left: 0.75rem; }
+.brief-line.momentum {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.section-head { font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-soft); margin: 2.25rem 0 0.75rem; }
