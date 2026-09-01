@@ -1,140 +1,153 @@
 # 설치 가이드
 
-로컬에서 MYCORP24를 실제로 띄우는 순서입니다. 각 단계는 앞 단계가 끝나야 의미가 있습니다.
+**목표: 한 번만 설정하면, 그 뒤로는 push만으로 배포까지 자동으로 끝나게.**
 
----
+GitHub Actions가 Supabase 마이그레이션을 적용하고 Netlify에 배포합니다.
+설정은 **GitHub 시크릿 등록 7개**가 전부이고, 이건 휴대폰 브라우저에서도 됩니다.
 
-## 0. 사전 준비
-
-```bash
-corepack enable          # pnpm
-node -v                  # 22 이상
-pnpm install
+```text
+git push  →  GitHub Actions
+                ├─ supabase db push      (스키마 적용)
+                ├─ verify.sql            (RLS 켜져 있는지 검증)
+                └─ netlify deploy --prod (배포)
 ```
 
 ---
 
-## 1. Supabase 프로젝트
+## 1. 시크릿 등록 (한 번)
 
-### 1.1 마이그레이션 적용
+**Settings → Secrets and variables → Actions → New repository secret**
 
-```bash
-npm i -g supabase                 # 또는 brew install supabase/tap/supabase
-supabase login
-supabase link --project-ref <프로젝트-ref>
-supabase db push
-```
+주소: `https://github.com/<owner>/<repo>/settings/secrets/actions`
 
-`supabase db push`는 `supabase/migrations/`의 세 파일을 순서대로 적용합니다.
-
-| 파일 | 내용 |
-|---|---|
-| `0001_init.sql` | 테이블 · 열거형 · RLS 정책 |
-| `0002_found_company.sql` | `found_company()` — 회사 생성의 유일한 경로 |
-| `0003_oauth_states.sql` | OAuth 핸드셰이크 상태 · 연결 컬럼 |
-
-`supabase link`가 DB 비밀번호를 물어봅니다. **어디에도 붙여넣지 마시고** Supabase 대시보드에서만 확인하십시오.
-
-### 1.2 적용 확인
-
-```sql
--- SQL Editor에서
-select tablename, rowsecurity from pg_tables
- where schemaname = 'public' order by tablename;
-```
-
-**모든 행의 `rowsecurity`가 `true`여야 합니다.** 하나라도 false면 그 테이블은 무방비입니다.
-
-### 1.3 정책 검증 (선택, 권장)
-
-```bash
-pnpm test:db
-```
-
-실제 프로젝트가 아니라 임시 로컬 클러스터에서 정책을 공격합니다.
-Docker도 네트워크도 필요 없습니다.
-
----
-
-## 2. 환경변수
-
-```bash
-cp .env.example .env.local
-```
-
-| 변수 | 어디서 | 성격 |
+| 시크릿 | 어디서 | 비고 |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | 대시보드 → Settings → API | 공개 |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 같은 화면 | 공개 (브라우저로 나감) |
-| `SUPABASE_SERVICE_ROLE_KEY` | 같은 화면 | **비밀. RLS를 무시합니다** |
-| `MYCORP24_CREDENTIAL_KEY` | 아래 명령으로 생성 | **비밀** |
-| `ANTHROPIC_API_KEY` | console.anthropic.com | **비밀** |
+| `SUPABASE_ACCESS_TOKEN` | supabase.com/dashboard/account/tokens | 개인 액세스 토큰 |
+| `SUPABASE_PROJECT_ID` | 프로젝트 URL의 ref (`https://<ref>.supabase.co`) | 공개 값 |
+| `SUPABASE_DB_PASSWORD` | 프로젝트 생성 시 정한 DB 비밀번호 | Settings → Database에서 재설정 가능 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Settings → API | 공개 값 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API | 공개 값 (브라우저로 나감) |
+| `NETLIFY_AUTH_TOKEN` | app.netlify.com → User settings → Applications → New access token | 비밀 |
+| `NETLIFY_SITE_ID` | 사이트 → Site configuration → General → Site ID | 공개 값 |
+
+시크릿이 없으면 워크플로는 **실패하지 않고 건너뜁니다.** 절반만 설정해도 됩니다 —
+Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
+
+### Netlify 사이트가 아직 없다면
+
+`netlify.toml`이 이미 저장소에 있으므로, Netlify에서 이 저장소를 한 번만 연결하면
+사이트가 생깁니다. 그 뒤 Site ID를 위 시크릿에 넣으십시오.
+
+### Netlify 런타임 환경변수
+
+빌드에 필요한 공개 값은 GitHub 시크릿에서 주입되지만,
+**서버에서만 쓰는 비밀은 Netlify 쪽에 직접** 넣어야 합니다
+(Site configuration → Environment variables):
+
+| 변수 | 성격 |
+|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | **비밀. RLS를 무시합니다** |
+| `MYCORP24_CREDENTIAL_KEY` | **비밀.** OAuth 토큰 암호화 키 |
+| `ANTHROPIC_API_KEY` | **비밀** |
+| `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` | 연동을 쓸 때만 |
+| `META_OAUTH_CLIENT_ID` / `_SECRET` | 연동을 쓸 때만 |
 
 ```bash
-# 자격증명 암호화 키 (32바이트 base64)
+# MYCORP24_CREDENTIAL_KEY 생성 (32바이트 base64)
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-> **`SUPABASE_SERVICE_ROLE_KEY`와 `MYCORP24_CREDENTIAL_KEY`는 채팅·이슈·커밋 어디에도
-> 붙여넣지 마십시오.** service role 키는 모든 테넌트의 모든 데이터를 읽습니다.
-> `MYCORP24_CREDENTIAL_KEY`를 잃어버리면 저장된 OAuth 토큰을 복호화할 수 없고,
-> 유출되면 암호화가 무의미해집니다.
->
-> `.env.local`은 `.gitignore`에 있습니다. 그 상태를 유지하십시오.
+> **이 비밀들은 채팅·이슈·커밋 어디에도 붙여넣지 마십시오.**
+> service role 키는 모든 테넌트의 모든 데이터를 읽습니다.
+> `MYCORP24_CREDENTIAL_KEY`를 잃으면 저장된 OAuth 토큰을 복호화할 수 없고,
+> 바꾸면 기존 연동이 전부 끊깁니다. 유출되면 암호화가 무의미해집니다.
 
 ---
 
-## 3. 실행
+## 2. 실행
+
+시크릿을 넣었으면 **아무 것도 더 할 필요가 없습니다.** `main`에 push하면 배포됩니다.
+
+지금 바로 돌리고 싶으면 — **GitHub 모바일 앱이나 브라우저에서**:
+
+**Actions → Deploy → Run workflow**
+
+`skip_migrations` 옵션이 있어 코드만 다시 배포할 수도 있습니다.
+
+---
+
+## 3. 브라우저만 있을 때 (수동 경로)
+
+CLI 없이 스키마를 넣어야 한다면:
+
+1. `supabase/schema.sql` 전체 복사
+2. Supabase 대시보드 → **SQL Editor** → New query → 붙여넣기 → Run
+3. 같은 자리에 `supabase/verify.sql`을 붙여넣고 Run
+
+`verify.sql`은 아무것도 바꾸지 않고, 상태가 안전하지 않으면 **예외를 던집니다:**
+
+- `public`의 모든 테이블에 RLS가 켜져 있는가
+- `integration_credentials`에 정책이 **하나도 없는가** (service role 전용, §110·§187)
+- `audit_events`에 update·delete 정책이 **없는가** (append-only, §220.4)
+- `companies`에 INSERT 정책이 **없는가** (`found_company()`만이 유일한 경로)
+- security definer 함수들이 `search_path`를 고정하는가
+
+`schema.sql`은 `supabase/migrations/`에서 생성되며, CI가 재생성해 비교하므로
+드리프트가 생길 수 없습니다 (`pnpm build:schema`).
+
+---
+
+## 4. 로컬 개발
 
 ```bash
+corepack enable
+pnpm install
+cp .env.example .env.local     # 값 채우기
 pnpm dev
 ```
 
-1. `/login` — 이메일로 로그인 링크
-2. `/onboarding` — 회사 설립 (질문 3개)
-3. `/hq` — 본사. 층수는 업종에 따라 다릅니다
-4. `/chat` — 비서실장
-5. `/connect` — 연결 센터
-6. `/approvals` — 결재실
+| 명령 | 설명 |
+|---|---|
+| `pnpm turbo run typecheck test build` | 전체 검사 |
+| `pnpm test:db` | **RLS 정책 테스트** — 임시 Postgres를 띄워 정책을 공격 |
+| `pnpm build:schema` | `supabase/schema.sql` 재생성 |
+| `pnpm clearance` | 도메인 RDAP 조회 |
 
-이메일이 안 오면 Supabase → Authentication → Providers → Email이 켜져 있는지,
-Redirect URLs에 `http://localhost:3000/auth/callback`이 있는지 확인하십시오.
+`pnpm test:db`는 Docker도, Supabase 프로젝트도, 네트워크도 필요 없습니다.
 
 ---
 
-## 4. OAuth 연동 (선택)
+## 5. 첫 사용
+
+1. `/login` — 이메일로 로그인 링크
+2. `/onboarding` — 회사 설립 (질문 3개)
+3. `/hq` · `/chat` · `/connect` · `/approvals`
+
+이메일이 안 오면 Supabase → Authentication → URL Configuration에
+`http://localhost:3000/auth/callback`과 배포 도메인이 있는지 확인하십시오.
+
+---
+
+## 6. OAuth 연동 (선택)
 
 연동 없이도 제품은 동작합니다. 비서실장은 연결되지 않은 기능을 **했다고 말하지
 않고** 연결이 필요하다고 보고합니다 (§151).
 
 ### Google (Gmail)
 
-1. console.cloud.google.com → APIs & Services → Credentials
-2. OAuth client ID (Web application)
-3. Authorized redirect URI:
-   `http://localhost:3000/api/oauth/GMAIL/callback`
-   (배포 시 `https://<도메인>/api/oauth/GMAIL/callback` 추가)
-4. Gmail API 활성화
-5. `GOOGLE_OAUTH_CLIENT_ID` · `GOOGLE_OAUTH_CLIENT_SECRET`를 `.env.local`에
+console.cloud.google.com → Credentials → OAuth client ID (Web)
+Redirect URI: `https://<도메인>/api/oauth/GMAIL/callback`
 
-현재 요청 범위는 **읽기 전용**(`gmail.readonly`)입니다. 발송은 더 넓은 범위가
-필요하고, 결재 흐름(§112)이 붙기 전까지는 요청하지 않습니다.
+요청 범위는 **읽기 전용**(`gmail.readonly`)입니다. 발송은 더 넓은 범위가 필요하고,
+결재 흐름(§112)이 붙기 전까지 요청하지 않습니다.
 
 ### Meta (Instagram)
 
-`META_OAUTH_CLIENT_ID` · `META_OAUTH_CLIENT_SECRET`.
-Redirect URI는 `/api/oauth/INSTAGRAM/callback`.
-어댑터는 아직 구현되지 않았습니다 — 연결 센터가 그렇게 표시합니다.
+developers.facebook.com → Facebook Login
+Redirect URI: `https://<도메인>/api/oauth/INSTAGRAM/callback`
 
----
-
-## 5. 배포 (Netlify)
-
-`netlify.toml`이 이미 있습니다. 필요한 것:
-
-- 위의 환경변수 전부를 Netlify Environment variables에 등록
-- OAuth Redirect URI에 배포 도메인 추가
-- Supabase Authentication → URL Configuration에 배포 도메인 추가
+조회 전용입니다. 게시(`instagram_content_publish`)와 광고비 변경(`ads_management`)은
+Meta 앱 심사가 필요하며, 어댑터가 **미지원으로 선언**하고 그 이유를 표시합니다.
 
 ---
 
@@ -142,8 +155,11 @@ Redirect URI는 `/api/oauth/INSTAGRAM/callback`.
 
 | 증상 | 원인 |
 |---|---|
-| "설정이 필요합니다" 화면 | `NEXT_PUBLIC_SUPABASE_*`가 비어 있음 |
-| 회사 설립이 안 됨 | `0002_found_company.sql` 미적용 |
-| 연결 후 "invalid_state" | redirect URI 불일치, 또는 10분 초과 |
-| 연결은 됐는데 데이터가 안 옴 | `MYCORP24_CREDENTIAL_KEY` 누락 또는 변경됨 |
-| 다른 회사 데이터가 보임 | RLS가 꺼져 있음 — 1.2를 다시 확인 |
+| Deploy가 통째로 skip됨 | 시크릿 미등록 — Actions 로그의 `preflight` 확인 |
+| `supabase link` 실패 | `SUPABASE_DB_PASSWORD` 또는 `SUPABASE_PROJECT_ID` 오류 |
+| verify.sql이 예외를 던짐 | 마이그레이션 일부만 적용됨 — 메시지가 어느 불변식인지 알려줍니다 |
+| "설정이 필요합니다" 화면 | `NEXT_PUBLIC_SUPABASE_*` 누락 |
+| 회사 설립 실패 | `0002_found_company.sql` 미적용 |
+| 연결 후 `invalid_state` | Redirect URI 불일치, 또는 10분 초과 |
+| 연결은 됐는데 데이터가 없음 | `MYCORP24_CREDENTIAL_KEY` 누락 또는 변경됨 |
+| 다른 회사 데이터가 보임 | RLS가 꺼져 있음 — `verify.sql`을 돌리십시오 |

@@ -276,3 +276,23 @@ export const refreshAccessToken = (input: RefreshInput): Promise<TokenSet> =>
     },
     input.fetch ?? globalThis.fetch,
   );
+
+/**
+ * Merge a refreshed token set over the stored one.
+ *
+ * Google does not return a refresh token when refreshing, so a naive
+ * `{...old, ...new}` drops it and the connection dies silently weeks later.
+ * The refresh token is only replaced when the provider actually sent a new one.
+ */
+export function mergeRefreshedTokens(existing: TokenSet, refreshed: TokenSet): TokenSet {
+  return {
+    accessToken: refreshed.accessToken,
+    ...(refreshed.refreshToken ?? existing.refreshToken
+      ? { refreshToken: refreshed.refreshToken ?? existing.refreshToken! }
+      : {}),
+    ...(refreshed.expiresAt ? { expiresAt: refreshed.expiresAt } : {}),
+    ...(refreshed.scopes ?? existing.scopes
+      ? { scopes: refreshed.scopes ?? existing.scopes! }
+      : {}),
+  };
+}

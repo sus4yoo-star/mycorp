@@ -1,0 +1,72 @@
+-- MYCORP24 — post-migration verification.
+--
+-- Paste into the Supabase SQL Editor after applying the schema. It changes
+-- nothing and raises if the database is not in a safe state.
+--
+-- What it checks is exactly what would be catastrophic to get wrong: a
+-- tenant-scoped table with row level security switched off is readable by every
+-- user of the project.
+
+do $$
+declare
+  missing text;
+  n int;
+begin
+  -- 1. Every table in `public` must have row level security enabled.
+  select string_agg(tablename, ', ' order by tablename) into missing
+    from pg_tables
+   where schemaname = 'public' and not rowsecurity;
+
+  if missing is not null then
+    raise exception 'RLS is OFF for: %', missing;
+  end if;
+
+  -- 2. Credentials must have RLS on and no policy at all, so only the service
+  --    role can reach them (spec §110, §187).
+  select count(*) into n from pg_policies
+   where schemaname = 'public' and tablename = 'integration_credentials';
+  if n <> 0 then
+    raise exception 'integration_credentials must have no policy, found %', n;
+  end if;
+
+  -- 3. The audit vault must be append-only: no update or delete policy.
+  select count(*) into n from pg_policies
+   where schemaname = 'public' and tablename = 'audit_events'
+     and cmd in ('UPDATE', 'DELETE');
+  if n <> 0 then
+    raise exception 'audit_events must not be updatable or deletable, found % policies', n;
+  end if;
+
+  -- 4. Companies must be creatable only through found_company().
+  select count(*) into n from pg_policies
+   where schemaname = 'public' and tablename = 'companies' and cmd = 'INSERT';
+  if n <> 0 then
+    raise exception 'companies must have no INSERT policy, found %', n;
+  end if;
+
+  if to_regprocedure('public.found_company(text,text,text,text,text)') is null then
+    raise exception 'found_company() is missing — migration 0002 was not applied';
+  end if;
+
+  -- 5. Security-definer helpers must pin search_path.
+  select count(*) into n
+    from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+   where ns.nspname = 'public'
+     and p.prosecdef
+     and coalesce(array_to_string(p.proconfig, ','), '') not like '%search_path%';
+  if n <> 0 then
+    raise exception '% security definer function(s) do not pin search_path', n;
+  end if;
+
+  raise notice 'MYCORP24 schema verified: RLS on everywhere, credentials sealed, audit append-only.';
+end
+$$;
+
+-- A readable summary for the eye as well as the assertion above.
+select tablename,
+       rowsecurity as rls_enabled,
+       (select count(*) from pg_policies p
+         where p.schemaname = 'public' and p.tablename = t.tablename) as policies
+  from pg_tables t
+ where schemaname = 'public'
+ order by tablename;

@@ -191,3 +191,35 @@ describe('provider registry', () => {
     }
   });
 });
+
+describe('mergeRefreshedTokens', () => {
+  it('keeps the stored refresh token when the provider sends none', async () => {
+    const { mergeRefreshedTokens } = await import('../src/oauth');
+    const merged = mergeRefreshedTokens(
+      { accessToken: 'old', refreshToken: '1//keep', scopes: ['a'] },
+      { accessToken: 'new', expiresAt: '2026-09-01T00:00:00.000Z' },
+    );
+    expect(merged).toEqual({
+      accessToken: 'new',
+      refreshToken: '1//keep',
+      expiresAt: '2026-09-01T00:00:00.000Z',
+      scopes: ['a'],
+    });
+  });
+
+  it('takes a rotated refresh token when the provider does send one', async () => {
+    const { mergeRefreshedTokens } = await import('../src/oauth');
+    const merged = mergeRefreshedTokens(
+      { accessToken: 'old', refreshToken: '1//old' },
+      { accessToken: 'new', refreshToken: '1//rotated' },
+    );
+    expect(merged.refreshToken).toBe('1//rotated');
+  });
+
+  it('does not invent a refresh token when neither side has one', async () => {
+    const { mergeRefreshedTokens } = await import('../src/oauth');
+    expect(mergeRefreshedTokens({ accessToken: 'a' }, { accessToken: 'b' })).toEqual({
+      accessToken: 'b',
+    });
+  });
+});

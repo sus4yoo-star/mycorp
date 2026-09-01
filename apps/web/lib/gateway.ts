@@ -8,9 +8,22 @@ import {
   type CredentialProvider,
   type GatewayRequest,
 } from '@mycorp24/tool-gateway';
-import { GmailAdapter, type IntegrationAdapter } from '@mycorp24/integrations';
+import {
+  GmailAdapter,
+  InstagramAdapter,
+  getProvider,
+  mergeRefreshedTokens,
+  refreshAccessToken,
+  type IntegrationAdapter,
+} from '@mycorp24/integrations';
 import { CredentialVault } from '@mycorp24/vault';
-import { appendAuditEvent, listApprovalPolicies, listConnections } from '@mycorp24/db';
+import {
+  appendAuditEvent,
+  hasPendingApproval,
+  listApprovalPolicies,
+  listConnections,
+  requestApproval,
+} from '@mycorp24/db';
 import type { ApprovalPolicy, CompanyId, ExternalAction } from '@mycorp24/types';
 import { getServerClient } from './supabase/server';
 import { getVault } from './vault';
@@ -30,6 +43,8 @@ export function makeAdapter(provider: string, accessToken: string): IntegrationA
   switch (provider) {
     case 'GMAIL':
       return new GmailAdapter({ accessToken });
+    case 'INSTAGRAM':
+      return new InstagramAdapter({ accessToken });
     default:
       return null;
   }
@@ -51,14 +66,37 @@ function credentialProvider(): CredentialProvider {
       const connection = connections.find((c) => c.catalog_id === catalogIdFor(provider));
       if (!connection) return null;
 
-      const credential = await getVault().get(companyId, connection.id);
+      const vault = getVault();
+      const credential = await vault.get(companyId, connection.id);
       if (!credential) return null;
 
-      // An expired access token is not a usable one. Refresh lands with the
-      // first write-capable adapter; until then, saying so is the honest answer.
-      if (CredentialVault.isExpiring(credential)) return null;
+      if (!CredentialVault.isExpiring(credential)) return credential.accessToken;
 
-      return credential.accessToken;
+      // Expired or about to expire. Refresh in place rather than failing the
+      // call — a founder should not have to reconnect Gmail every hour.
+      if (!credential.refreshToken) return null;
+
+      const oauth = getProvider(provider);
+      const clientId = oauth ? process.env[oauth.clientIdEnv] : undefined;
+      const clientSecret = oauth ? process.env[oauth.clientSecretEnv] : undefined;
+      if (!oauth || !clientId || !clientSecret) return null;
+
+      try {
+        const refreshed = await refreshAccessToken({
+          provider: oauth,
+          clientId,
+          clientSecret,
+          refreshToken: credential.refreshToken,
+        });
+        // Google returns no refresh token on refresh; merging preserves it.
+        const merged = mergeRefreshedTokens(credential, refreshed);
+        await vault.put(companyId, connection.id, merged);
+        return merged.accessToken;
+      } catch {
+        // A failed refresh means the founder revoked access or the grant
+        // expired. Report "not connected" rather than retrying forever.
+        return null;
+      }
     },
   };
 }
@@ -91,6 +129,9 @@ const toPolicies = (
 
 export interface GatewayCallInput extends GatewayRequest {
   readonly provider: string;
+  /** Shown to the founder if the policy sends this to the approval room. */
+  readonly approvalTitle?: string;
+  readonly approvalSummary?: string;
 }
 
 /**
@@ -137,5 +178,30 @@ export async function runThroughGateway(
     audit: auditSink(),
   });
 
-  return gateway.execute(adapter, input);
+  const outcome = await gateway.execute(adapter, input);
+
+  // Policy said ASK. The agent has prepared the work and now stops — but the
+  // founder has to be able to see it, or the pause is indistinguishable from
+  // the action being dropped (§112, §209).
+  if (outcome.kind === 'NEEDS_APPROVAL' && input.approvalTitle) {
+    const already = await hasPendingApproval(
+      db,
+      input.companyId,
+      input.action,
+      input.approvalTitle,
+    );
+    if (!already) {
+      await requestApproval(db, {
+        companyId: input.companyId,
+        action: input.action,
+        title: input.approvalTitle,
+        summary: input.approvalSummary ?? outcome.reason,
+        ...(input.amount !== undefined ? { amount: input.amount } : {}),
+        ...(input.currency ? { currency: input.currency } : {}),
+        requestedBy: String(input.agent),
+      });
+    }
+  }
+
+  return outcome;
 }

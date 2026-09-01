@@ -462,3 +462,70 @@ export async function consumeOAuthState(
     redirectTo: data.redirect_to,
   };
 }
+
+/**
+ * Raise an approval for the founder — spec §112.
+ *
+ * Called when the tool gateway's policy check says ASK. The agent has already
+ * prepared the work; this is the point at which it stops and waits. Creating
+ * the row and auditing the pause are one operation: an approval nobody can see
+ * is the same as an action silently dropped.
+ */
+export async function requestApproval(
+  db: Db,
+  input: {
+    readonly companyId: string;
+    readonly action: string;
+    readonly title: string;
+    readonly summary: string;
+    readonly amount?: number;
+    readonly currency?: string;
+    readonly requestedBy?: string;
+  },
+): Promise<ApprovalRow> {
+  const row = unwrap(
+    await db
+      .from('approvals')
+      .insert({
+        company_id: input.companyId,
+        action: input.action,
+        title: input.title,
+        summary: input.summary,
+        ...(input.amount !== undefined ? { amount: String(input.amount) } : {}),
+        ...(input.currency ? { currency: input.currency } : {}),
+        ...(input.requestedBy ? { requested_by: input.requestedBy } : {}),
+      })
+      .select('*')
+      .single(),
+    'requesting approval',
+  );
+
+  await appendAuditEvent(db, {
+    companyId: input.companyId,
+    actor: input.requestedBy ?? 'system',
+    action: `APPROVAL:REQUEST:${input.action}`,
+    outcome: 'PENDING_APPROVAL',
+    reason: input.title,
+  });
+
+  return row;
+}
+
+/** True when an equivalent request is already waiting, so we do not stack duplicates. */
+export async function hasPendingApproval(
+  db: Db,
+  companyId: string,
+  action: string,
+  title: string,
+): Promise<boolean> {
+  const { data, error } = await db
+    .from('approvals')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('status', 'PENDING')
+    .eq('action', action)
+    .eq('title', title)
+    .limit(1);
+  if (error) throw new DbError('checking for a pending approval', error);
+  return (data?.length ?? 0) > 0;
+}

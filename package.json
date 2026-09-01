@@ -12,7 +12,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "clearance": "bash scripts/clearance-check.sh",
-    "test:db": "bash scripts/db-test.sh"
+    "test:db": "bash scripts/db-test.sh",
+    "build:schema": "bash scripts/build-schema.sh"
   },
   "devDependencies": {
     "turbo": "^2.10.12",
