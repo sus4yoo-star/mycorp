@@ -758,8 +758,8 @@ UI·보고 문장·조직도 모두 `CRO`로 표기한다. 01 명세에 반영 �
 ```text
 20F  TOP   CHAIRMAN FLOOR                  회장실 · 비서실 · 결재실
 19F        AUDIT & RISK FLOOR              감사실 · 전사리스크관리실   [회장 직속]
-18F        EXECUTIVE BOARD                 CEO·CSO·CMO·CRO·COO·CFO·CDO·CTO·CPO·CHRO·CLO·CISO
-17F        EXECUTIVE STRATEGY              경영전략실 · 시장정보실 · 신사업개발실
+18F        EXECUTIVE STRATEGY              경영전략실 · 시장정보실 · 신사업개발실 · CEO Office
+17F        EXECUTIVE BOARD                 CEO·CSO·CMO·CRO·COO·CFO·CDO·CTO·CPO·CHRO·CLO·CISO
 16F        LEGAL & COMPLIANCE       CLO    [조건부]
 15F        INFORMATION SECURITY     CISO   [조건부]
 14F        TECHNOLOGY               CTO    [조건부]
@@ -781,11 +781,17 @@ UI·보고 문장·조직도 모두 `CRO`로 표기한다. 01 명세에 반영 �
  B2        DATA VAULT & SYSTEM CORE        Memory · Audit Vault · Backup
 ```
 
-**층 삽입 순서**는 고정한다. 부서가 추가될 때마다 층 번호가 흔들리면 사용자가 건물을 기억할 수 없다.
+**층 삽입 순서**는 고정한다. (경영전략실이 임원층보다 위인 것은 01 명세의 기존 구조를 따른 것이다 —
+CEO Office가 이 층에 있다.) 부서가 추가될 때마다 층 번호가 흔들리면 사용자가 건물을 기억할 수 없다.
 새 본부는 위 표의 자기 자리에 삽입되고, 그 위층들의 번호가 하나씩 올라간다.
 
-> 예: 12층 기본 스택에서 CISO를 임명 → INFORMATION SECURITY가 10F로 삽입,
-> 기존 10F/11F/12F(임원층·전략실·회장실)는 11F/12F/13F로 상승. 회장실은 여전히 `TOP`.
+> 예: 12층 기본 스택(10F 임원층 · 11F 전략실 · 12F 회장실)에서 CISO를 임명하면
+> INFORMATION SECURITY가 10F로 삽입되고, 동시에 감사실이 회장실에서 분리되어 전용 층을 갖는다.
+> 결과: 10F 정보보안 · 11F 임원층 · 12F 전략실 · 13F 감사실 · **14F 회장실(TOP)**.
+> 회장실은 두 층 올라간다 — 신규 본부 하나, 감사실 분리 하나.
+>
+> 이 계산은 `packages/business-logic`의 `resolveFloorStack()`이 수행하며,
+> 기본 12층·전체 20층 스택과 위 예시는 모두 테스트로 고정되어 있다.
 
 ---
 

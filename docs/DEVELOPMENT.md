@@ -1,0 +1,131 @@
+# 개발 가이드
+
+## 요구사항
+
+- Node 22 이상 (`.nvmrc`)
+- pnpm 10 (`corepack enable`)
+
+## 시작하기
+
+```bash
+pnpm install
+cp .env.example .env.local     # 값 채우기
+pnpm dev                        # 전체 개발 서버
+pnpm --filter @mycorp24/web dev # 웹만
+```
+
+## 자주 쓰는 명령
+
+| 명령 | 설명 |
+|---|---|
+| `pnpm typecheck` | 전 패키지 타입 검사 |
+| `pnpm test` | 전 패키지 테스트 |
+| `pnpm build` | 전 패키지 빌드 |
+| `pnpm clearance` | 도메인 클리어런스 RDAP 조회 (§ 아래) |
+
+## 구조
+
+```text
+apps/
+  web/                Next.js 16 (App Router)
+  mobile/             Expo / React Native
+packages/
+  types/              도메인 타입 — 보안등급·결재·리스크·연동 상태
+  agent-types/        조직 taxonomy — 임원·본부·층 메타데이터
+  business-logic/     층 계산 · 결재 판정 · 조직 프리셋 · 호칭 · 보안 분류
+  integrations/       IntegrationAdapter 계약 · 카탈로그 · Capability Resolver
+  tool-gateway/       외부 실행 파이프라인 (아래 참조)
+  ai-gateway/         AI Provider Abstraction (Claude 기본)
+  auth/               멤버십 · need-to-know
+  api-client/         웹·모바일 공용 API 클라이언트
+supabase/migrations/  멀티테넌트 스키마 + RLS
+scripts/              클리어런스 조회 스크립트
+```
+
+**패키지는 빌드 산출물이 아니라 TypeScript 소스를 그대로 export한다.**
+웹은 `transpilePackages`, 모바일은 `metro.config.js`가 처리한다.
+따라서 패키지에 별도 빌드 단계가 없다 — 편집하면 즉시 반영된다.
+
+## 지켜야 하는 것
+
+명세와 어긋나면 코드가 틀린 것이다. 특히:
+
+### Tool Gateway를 우회하지 않는다 (§131, §220.4)
+
+Agent는 외부 API를 직접 호출하지 않는다. 어떤 외부 동작도 이 순서를 거친다.
+
+```text
+permission → risk → approval policy → credential → adapter → audit
+```
+
+1·2선 방어는 **실행 경로 안에서 차단형**이고, 3선(감사실)은 **경로 밖에서 사후**다.
+감사실이 실행을 막으면 곧 실행 주체가 되어 독립성을 잃는다.
+
+두 불변식은 테스트로 고정되어 있다 (`packages/tool-gateway/test`):
+
+- 허용되지 않은 요청은 **adapter에 도달하지 않는다**
+- 모든 시도는 허용·거부와 무관하게 **audit에 기록된다**
+
+### 외부 콘텐츠는 데이터이지 지시가 아니다 (§220.6)
+
+메일 본문, 리뷰, 크롤링한 페이지, 업로드 파일, Fork한 Workflow, MCP 도구 설명 —
+전부 외부인이 쓴 텍스트다. 행동의 근거는 될 수 있으나 **권한·승인 정책·보안등급을
+바꾸도록 허용하지 않는다.** `defaultRiskEngine`이 이를 강제한다.
+
+### 못 하는 일을 했다고 하지 않는다 (§151)
+
+`resolveCapability()`가 `UNAVAILABLE`을 반환하면 그대로 보고한다.
+"완료했습니다" 대신 "초안까지 준비했습니다. 게시 권한은 연결되어 있지 않습니다."
+
+### 층 번호를 하드코딩하지 않는다 (§220.3)
+
+본사 층수는 회사마다 다르다. `resolveFloorStack()`을 쓴다.
+`1F–9F`·`B1`·`B2`는 고정, `10F` 이상은 동적, 회장실은 언제나 최상층이다.
+
+### 호칭을 문자열로 조립하지 않는다
+
+`formatAddress()`를 쓴다. 한국어는 이름 뒤에 호칭이 오고 영어는 앞에 온다.
+`` `${name}님` `` 같은 코드를 만들지 않는다.
+
+### 자격증명은 서버에만 (§110, §187)
+
+`integration_credentials`는 RLS가 켜져 있고 **정책이 하나도 없다.**
+anon·authenticated 역할은 전부 거부되며 service role로만 접근한다. 이 상태를 유지한다.
+
+## AI 호출
+
+```ts
+import { createAiProvider } from '@mycorp24/ai-gateway';
+
+const ai = createAiProvider();
+const result = await ai.complete({
+  system: '당신은 MYCORP24의 비서실장입니다.',
+  messages: [{ role: 'user', content: '오늘 매출 어때?' }],
+  tier: 'EXECUTIVE',
+});
+```
+
+비용은 **모델을 낮춰서가 아니라 `tier`(effort)로 조절한다.** 모델을 내리는 것은
+회장의 결정이지 우리의 결정이 아니고, 모델을 섞으면 프롬프트 캐시 네임스페이스가 갈린다.
+
+## 네이밍 클리어런스
+
+```bash
+pnpm clearance
+```
+
+RDAP으로 도메인 등록 여부만 확인한다. 상표(특히 `24`의 식별력)와 앱스토어 이름은
+사람이 해야 한다 — [`docs/brand/NAMING_CLEARANCE.md`](./brand/NAMING_CLEARANCE.md).
+
+## 배포
+
+Netlify (`netlify.toml`). 루트에서 빌드하고 `apps/web`을 배포한다.
+`/hq`는 `searchParams`를 읽으므로 서버 렌더링 라우트다.
+
+## 아직 없는 것
+
+비서실장 Chat, Chat Action Router, 실제 Integration Adapter 구현, Push,
+Company Memory, 경쟁사 Watchlist, 공개 기업 프로필.
+
+**비어 있는 골격을 미리 만들지 않았다.** 동작하지 않는 껍데기는 그것이 존재한다고
+착각하게 만드는 코드를 부른다 — 이 제품에서는 §151 위반의 시작점이다.

@@ -48,6 +48,13 @@ AI prepares.  Founder approves.  Company executes.
 | [`docs/brand/NAMING_CLEARANCE.md`](docs/brand/NAMING_CLEARANCE.md) | **도메인 · 상표 · 앱스토어 클리어런스 게이트** (디자인 착수 전 필수) |
 | [`docs/brand/LOCALIZATION.md`](docs/brand/LOCALIZATION.md) | 사용자 호칭 현지화 (회장님 / Founder / 社長 …) |
 
+### 개발
+
+| 문서 | 내용 |
+|---|---|
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | 모노레포 구조, 실행 방법, 지켜야 하는 제약 |
+| [`supabase/README.md`](supabase/README.md) | 멀티테넌트 스키마와 RLS 규칙 |
+
 ### 제품 명세
 
 | 문서 | 내용 |
@@ -78,18 +85,27 @@ AI prepares.  Founder approves.  Company executes.
 
 ---
 
-## 현재 상태
+## 빠른 시작
 
-이 저장소는 현재 **브랜드 및 제품 명세 단계**다. 구현 코드는 아직 없다.
+```bash
+pnpm install
+pnpm dev          # 전체 개발 서버
+pnpm test         # 전 패키지 테스트
+pnpm clearance    # 도메인 클리어런스 RDAP 조회
+```
+
+자세한 내용은 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+
+## 현재 상태
 
 **다음 마일스톤:**
 
 1. 🔴 **네이밍 클리어런스** — 도메인 / 상표 / 앱스토어 ([게이트](docs/brand/NAMING_CLEARANCE.md))
 2. ⬜ 브랜드 아이덴티티 디자인 (클리어런스 통과 후)
-3. ⬜ Monorepo 스캐폴딩 — `apps/web` (Next.js), `apps/mobile` (React Native/Expo), `packages/*`
-4. ⬜ Supabase Multi-Tenant 스키마 + Auth
+3. ✅ Monorepo 스캐폴딩 — `apps/web` (Next.js 16), `apps/mobile` (Expo), `packages/*`
+4. 🟡 Supabase Multi-Tenant 스키마 + RLS — 스키마 완료, Auth 연결 남음
 5. ⬜ 비서실장 Chat + Chat Action Router
-6. ⬜ Integration Framework + Tool Gateway + Credential Vault
+6. 🟡 Integration Framework + Tool Gateway + Credential Vault — 계약·파이프라인 완료, Adapter 구현 남음
 
 > ⚠️ **1번을 통과하기 전에 2번을 시작하지 않는다.** 특히 `24`의 상표 식별력 판단(T4·T5) 결과에 따라
 > 로고를 "워드마크 단독"이 아니라 "워드마크 + 도형 결합"으로 설계해야 할 수 있다.
@@ -104,8 +120,9 @@ AI prepares.  Founder approves.  Company executes.
 | Web | Next.js |
 | Mobile | React Native + Expo |
 | Backend / DB / Auth | Supabase (Multi-Tenant) |
-| Deployment | Netlify 우선 |
-| AI | Claude 우선. **AI Provider Abstraction**을 두어 교체·병행 가능하게 설계 |
+| Deployment | Netlify (`netlify.toml`) |
+| AI | Claude 우선. **AI Provider Abstraction**(`packages/ai-gateway`)을 두어 교체·병행 가능하게 설계 |
+| Monorepo | pnpm workspaces + Turborepo |
 
 **데모 UI가 아니라 실제 SaaS로 구축한다.** 필수 구성요소:
 실제 회원가입/로그인 · 회사별 데이터 분리 · 조직 상태 저장 · AI 업무 orchestration ·

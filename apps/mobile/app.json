@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "MYCORP24",
+    "slug": "mycorp24",
+    "scheme": "mycorp24",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.mycorp24.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.mycorp24.app",
+      "edgeToEdgeEnabled": true
+    },
+    "extra": {
+      "note": "App name is MYCORP24 on every platform. See docs/brand/BRAND.md §2.2 — no per-platform or per-tier name variants."
+    }
+  }
+}
