@@ -1,14 +1,14 @@
-# MYCORP 본사 층별 소개 및 조직도
-## MYCORP Headquarters
+# MYCORP24 본사 층별 소개 및 조직도
+## MYCORP24 Headquarters
 
-**MYCORP**  
-**Your AI Company.**
+**MYCORP24**  
+**Your Company. Always On.**
 
 **One Founder. An Entire Company.**
 
-MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으로 구성된 하나의 기업을 운영할 수 있도록 만드는 AI Company Operating System이다.
+MYCORP24는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으로 구성된 하나의 기업을 운영할 수 있도록 만드는 AI Company Operating System이다.
 
-사용자는 MYCORP의 최고 의사결정권자이며, AI 임직원에게 일일이 업무를 지시하지 않는다.
+사용자는 MYCORP24의 최고 의사결정권자이며, AI 임직원에게 일일이 업무를 지시하지 않는다.
 
 **회장 / Founder → 비서실장 → 최고경영진 → 본부 → 팀 → AI 직원**
 
@@ -17,7 +17,7 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 ---
 
 > **브랜드 정본:** [`docs/brand/BRAND.md`](../brand/BRAND.md) · **리네이밍 이력:** [`docs/spec/README.md`](./README.md)
-> 제품명은 **MYCORP**다. `AI Company`는 제품 카테고리명으로만 사용한다.
+> 제품명은 **MYCORP24**다. `AI Company`는 제품 카테고리명으로만 사용한다.
 > 브랜드·네이밍·호칭에서 이 명세와 브랜드 문서가 충돌하면 브랜드 문서가 우선한다.
 
 
@@ -33,7 +33,7 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 [04 명세 §220.3](./04-organization-expansion.md)을 따른다.
 
 ```text
-                 MYCORP HEADQUARTERS
+                 MYCORP24 HEADQUARTERS
 
 ┌──────────────────────────────────────────────┐
 │ 12F  CHAIRMAN FLOOR                         │
@@ -69,7 +69,7 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 │ 2F   CREATIVE STUDIO                        │
 │      디자인 · 영상 · 이미지 · 숏폼 · 제작          │
 ├──────────────────────────────────────────────┤
-│ 1F   MYCORP LOBBY                           │
+│ 1F   MYCORP24 LOBBY                           │
 │      통합 Inbox · 안내 · 방문자 · Connect Center   │
 ├──────────────────────────────────────────────┤
 │ B1   AI INFRASTRUCTURE CENTER               │
@@ -91,7 +91,7 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 # 12F — CHAIRMAN FLOOR
 ## 회장실 · 비서실
 
-MYCORP에서 가장 높은 층이며 사용자의 공간이다.
+MYCORP24에서 가장 높은 층이며 사용자의 공간이다.
 
 이 층에는 AI 직원이 많은 것이 아니라, **기업 전체의 의사결정이 모이는 공간**이 위치한다.
 
@@ -122,7 +122,7 @@ Chairman Office / Founder Office
 ### 비서실
 Office of the Chief of Staff
 
-MYCORP에서 가장 중요한 조직.
+MYCORP24에서 가장 중요한 조직.
 
 구성:
 
@@ -283,7 +283,7 @@ Business Model Analyst
 # 10F — EXECUTIVE BOARD FLOOR
 ## 최고경영진
 
-MYCORP의 AI 임원들이 근무하는 층.
+MYCORP24의 AI 임원들이 근무하는 층.
 
 ```text
                     CHAIRMAN
@@ -361,7 +361,7 @@ Chief Legal & Compliance Officer
 
 CMO 산하 핵심 조직.
 
-MYCORP 초기 버전에서 가장 강력하게 구현해야 하는 층이다.
+MYCORP24 초기 버전에서 가장 강력하게 구현해야 하는 층이다.
 
 ---
 
@@ -601,7 +601,7 @@ Upsell
 # 7F — DATA & INTELLIGENCE DIVISION
 ## 데이터본부
 
-MYCORP의 두뇌.
+MYCORP24의 두뇌.
 
 CDO가 총괄한다.
 
@@ -838,7 +838,7 @@ Runway
 # 4F — PEOPLE & ORGANIZATION
 ## 인사·조직본부
 
-MYCORP의 특이한 부서.
+MYCORP24의 특이한 부서.
 
 실제 사람뿐 아니라 **AI 직원 자체를 관리한다.**
 
@@ -1046,10 +1046,10 @@ Platform Specification
 
 ---
 
-# 1F — MYCORP LOBBY
+# 1F — MYCORP24 LOBBY
 ## 통합 업무 입구
 
-각종 외부 정보가 MYCORP로 들어오는 곳.
+각종 외부 정보가 MYCORP24로 들어오는 곳.
 
 ---
 
@@ -1213,7 +1213,7 @@ Approval Policy
 # B2 — DATA VAULT & SYSTEM CORE
 ## 기업 기억 및 데이터 금고
 
-MYCORP가 회사에 대해 기억하는 모든 정보.
+MYCORP24가 회사에 대해 기억하는 모든 정보.
 
 ---
 
@@ -1273,7 +1273,7 @@ MYCORP가 회사에 대해 기억하는 모든 정보.
 
 ---
 
-# MYCORP 전체 조직도
+# MYCORP24 전체 조직도
 
 ```text
                          FOUNDER / CHAIRMAN
@@ -1395,7 +1395,7 @@ CMO / CFO / CRO 의견 취합
 
 각 본부 실행
 
-이 흐름 자체가 MYCORP의 핵심 제품 경험이다.
+이 흐름 자체가 MYCORP24의 핵심 제품 경험이다.
 
 ---
 
@@ -1405,7 +1405,7 @@ CMO / CFO / CRO 의견 취합
 
 예:
 
-**MYCORP HQ**
+**MYCORP24 HQ**
 
 12F  
 CHAIRMAN FLOOR  
@@ -1466,11 +1466,11 @@ DATA VAULT
 
 ---
 
-# MYCORP의 핵심 조직 철학
+# MYCORP24의 핵심 조직 철학
 
 일반 AI 서비스는 사용자가 여러 AI Agent를 직접 선택한다.
 
-MYCORP는 다르다.
+MYCORP24는 다르다.
 
 사용자는 조직도를 알 필요조차 없다.
 
@@ -1484,7 +1484,7 @@ MYCORP는 다르다.
 
 **"비서실장, 알아서 처리해."**
 
-그러면 MYCORP의 수십 명의 AI 직원이 각자 자신의 자리에서 업무를 시작한다.
+그러면 MYCORP24의 수십 명의 AI 직원이 각자 자신의 자리에서 업무를 시작한다.
 
 사용자는 업무 진행 상황을 건물에서 볼 수 있고,
 
@@ -1494,10 +1494,10 @@ MYCORP는 다르다.
 
 결재한다.
 
-그것이 MYCORP다.
+그것이 MYCORP24다.
 
-**MYCORP**
+**MYCORP24**
 
-**Your AI Company.**
+**Your Company. Always On.**
 
 **One Founder. An Entire Company.**

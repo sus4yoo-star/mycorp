@@ -1,15 +1,15 @@
-# MYCORP 조직 확장 명세
+# MYCORP24 조직 확장 명세
 ## Legal · Security · Product · Technology · Audit · Risk · Global
 
-> **MYCORP — Your AI Company.**  
+> **MYCORP24 — Your Company. Always On.**  
 > One Founder. An Entire Company.
 
-이 문서는 기존 MYCORP 조직도에 빠져 있던 핵심 기업 기능을 추가하기 위한 확장 명세다.
+이 문서는 기존 MYCORP24 조직도에 빠져 있던 핵심 기업 기능을 추가하기 위한 확장 명세다.
 
 ---
 
 > **브랜드 정본:** [`docs/brand/BRAND.md`](../brand/BRAND.md) · **리네이밍 이력:** [`docs/spec/README.md`](./README.md)
-> 제품명은 **MYCORP**다. `AI Company`는 제품 카테고리명으로만 사용한다.
+> 제품명은 **MYCORP24**다. `AI Company`는 제품 카테고리명으로만 사용한다.
 > 섹션 번호는 §201–219이며, 01~03 명세(§72–200)에 이어지는 **연속 번호**다.
 
 
@@ -98,7 +98,7 @@ FOUNDER / CHAIRMAN
 # 203. Information Security Division
 ## 정보보안본부 — CISO
 
-MYCORP는 메일, SNS, 광고, 예약, 고객, 매출, 결제 등 매우 민감한 시스템을 연결하므로 CISO를 독립 임원으로 둔다.
+MYCORP24는 메일, SNS, 광고, 예약, 고객, 매출, 결제 등 매우 민감한 시스템을 연결하므로 CISO를 독립 임원으로 둔다.
 
 ### Identity & Access Management
 - 계정
@@ -150,7 +150,7 @@ MYCORP는 메일, SNS, 광고, 예약, 고객, 매출, 결제 등 매우 민감�
 # 204. Technology Division
 ## 기술본부 — CTO
 
-MYCORP를 사용하는 Founder가 SaaS, 앱, 웹서비스 또는 디지털 사업을 운영할 경우 기술조직도 제공한다.
+MYCORP24를 사용하는 Founder가 SaaS, 앱, 웹서비스 또는 디지털 사업을 운영할 경우 기술조직도 제공한다.
 
 ### Software Engineering
 - Web
@@ -317,7 +317,7 @@ CTO는 **어떻게 만들 것인가**, CPO는 **무엇을 왜 만들 것인가**
 # 209. Internal Audit Office
 ## 감사실 — 회장 직속
 
-MYCORP의 핵심 차별화 조직.
+MYCORP24의 핵심 차별화 조직.
 
 AI가 AI의 결과를 그대로 믿지 않고 **독립적으로 검증한다.**
 
@@ -425,7 +425,7 @@ Risk Categories:
 # 212. Global Business Division
 ## 글로벌사업본부
 
-전 세계 1인 창업자를 위한 MYCORP에서 중요한 조직이다.
+전 세계 1인 창업자를 위한 MYCORP24에서 중요한 조직이다.
 
 ### Market Expansion
 - 진출 국가 분석
@@ -456,7 +456,7 @@ Risk Categories:
 
 ---
 
-# 213. 최종 MYCORP 조직 체계
+# 213. 최종 MYCORP24 조직 체계
 
 ```text
 FOUNDER / CHAIRMAN
@@ -498,7 +498,7 @@ FOUNDER / CHAIRMAN
 
 # 214. 조직은 모든 회사에 똑같이 생성하지 않는다
 
-MYCORP의 중요한 원칙:
+MYCORP24의 중요한 원칙:
 
 **회사에 필요 없는 부서를 억지로 만들지 않는다.**
 
@@ -545,7 +545,7 @@ MYCORP의 중요한 원칙:
 - Finance
 - Legal/IP
 
-회사가 성장하거나 새로운 Integration이 연결되면 MYCORP가 먼저 조직 확장을 제안한다.
+회사가 성장하거나 새로운 Integration이 연결되면 MYCORP24가 먼저 조직 확장을 제안한다.
 
 > “회장님, 최근 B2B 문의가 증가했습니다. 현재 마케팅본부에서 영업 업무까지 처리하고 있습니다. 영업본부를 신설하는 것을 제안드립니다.”
 
@@ -629,7 +629,7 @@ Founder 결정
 
 # 217. Three Lines of Defense
 
-MYCORP의 AI 자율성을 안전하게 운영하기 위해 다음 구조를 적용한다.
+MYCORP24의 AI 자율성을 안전하게 운영하기 위해 다음 구조를 적용한다.
 
 ## 1차 방어
 실행 부서
@@ -652,7 +652,7 @@ Internal Audit
 
 # 218. 최종 철학
 
-MYCORP의 목표는 AI Agent를 많이 보여주는 것이 아니다.
+MYCORP24의 목표는 AI Agent를 많이 보여주는 것이 아니다.
 
 **Founder 한 명이 실제 기업의 기능을 가질 수 있게 만드는 것**이다.
 
@@ -674,17 +674,17 @@ Founder는 모든 AI 직원을 직접 관리하지 않는다.
 
 ---
 
-# 219. MYCORP 최종 메시지
+# 219. MYCORP24 최종 메시지
 
-**MYCORP**
+**MYCORP24**
 
-**Your AI Company.**
+**Your Company. Always On.**
 
 **One Founder. An Entire Company.**
 
 다른 서비스가 AI 직원을 제공한다면,
 
-MYCORP는 **기업 전체를 제공한다.**
+MYCORP24는 **기업 전체를 제공한다.**
 
 ---
 
@@ -862,7 +862,7 @@ UI·보고 문장·조직도 모두 `CRO`로 표기한다. 01 명세에 반영 �
 ### AI Security가 막아야 하는 실제 경로
 
 §203의 `Prompt Injection 방어 / 외부 콘텐츠 신뢰도 검증`은 추상적 항목이 아니다.
-MYCORP는 아래 경로로 **외부인이 작성한 텍스트를 Agent에게 먹인다.**
+MYCORP24는 아래 경로로 **외부인이 작성한 텍스트를 Agent에게 먹인다.**
 
 | 경로 | 명세 | 위험 |
 |---|---|---|

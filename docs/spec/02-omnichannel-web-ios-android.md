@@ -1,8 +1,8 @@
-# MYCORP — Omni-Channel / Web + iOS + Android 확장 개발 명세
+# MYCORP24 — Omni-Channel / Web + iOS + Android 확장 개발 명세
 
 ## 72. 제품 플랫폼 정의
 
-MYCORP는 단순 웹 SaaS가 아니다.
+MYCORP24는 단순 웹 SaaS가 아니다.
 
 최종 제품은 아래 세 플랫폼에서 동일한 AI 기업을 운영할 수 있어야 한다.
 
@@ -19,7 +19,7 @@ MYCORP는 단순 웹 SaaS가 아니다.
 ---
 
 > **브랜드 정본:** [`docs/brand/BRAND.md`](../brand/BRAND.md) · **리네이밍 이력:** [`docs/spec/README.md`](./README.md)
-> 제품명은 **MYCORP**다. `AI Company`는 제품 카테고리명으로만 사용한다.
+> 제품명은 **MYCORP24**다. `AI Company`는 제품 카테고리명으로만 사용한다.
 > 브랜드·네이밍·호칭에서 이 명세와 브랜드 문서가 충돌하면 브랜드 문서가 우선한다.
 
 
@@ -69,6 +69,27 @@ packages/auth
 Monorepo 방식으로 구성한다.
 
 Turborepo 또는 적절한 Monorepo Tool 사용.
+
+---
+
+## 73.1 확정된 기술 스택
+
+| 영역 | 선택 |
+|---|---|
+| Web | Next.js |
+| Mobile | React Native + Expo |
+| Backend / DB / Auth | Supabase (Multi-Tenant) |
+| Deployment | **Netlify 우선** |
+| AI | **Claude 우선.** AI Provider Abstraction을 두어 교체·병행 가능하게 설계 |
+
+AI Provider Abstraction은 B1 AI Model Gateway(01 명세)의 구현체다.
+Agent 코드가 특정 벤더 SDK에 직접 의존하지 않게 한다.
+
+MYCORP24는 데모 UI가 아니라 **실제 SaaS**로 구축한다. 필수 구성요소:
+
+실제 회원가입/로그인 · 회사별 데이터 분리 · 조직 상태 저장 · AI 업무 orchestration ·
+Task state · Approval state · Activity logs · Reports · Notifications · Integrations ·
+Security / permissions
 
 ---
 
@@ -200,7 +221,7 @@ Report
 
 # 76. Conversational Operating System
 
-MYCORP의 가장 중요한 원칙:
+MYCORP24의 가장 중요한 원칙:
 
 **모든 기능은 가능하면 자연어 채팅으로 접근 가능해야 한다.**
 
@@ -654,7 +675,7 @@ Search Ads API
 
 # 85. Naver Place
 
-MYCORP의 국내 소상공인 핵심 Integration.
+MYCORP24의 국내 소상공인 핵심 Integration.
 
 가능한 기능:
 
@@ -1518,7 +1539,7 @@ Event-Based Workflow
 
 ---
 
-# 109. MYCORP Automation Engine
+# 109. MYCORP24 Automation Engine
 
 schedule_rules
 
@@ -1702,13 +1723,13 @@ CHAT
 
 Push 클릭 시 정확한 화면으로 이동.
 
-mycorp://approval/123
+mycorp24://approval/123
 
-mycorp://report/456
+mycorp24://report/456
 
-mycorp://chat/thread
+mycorp24://chat/thread
 
-mycorp://task/789
+mycorp24://task/789
 
 ---
 
@@ -1766,7 +1787,7 @@ App Store와 Google Play 정책을 준수한다.
 
 ---
 
-# 118. Share To MYCORP
+# 118. Share To MYCORP24
 
 iOS/Android Share Extension을 고려한다.
 
@@ -1776,7 +1797,7 @@ Share
 
 ↓
 
-MYCORP
+MYCORP24
 
 ↓
 
@@ -2022,7 +2043,7 @@ Email
 
 # 128. Korea-First Product
 
-MYCORP는 글로벌 확장 가능하게 만들되 MVP는 한국 소상공인 중심.
+MYCORP24는 글로벌 확장 가능하게 만들되 MVP는 한국 소상공인 중심.
 
 따라서 국내 우선 연결:
 
@@ -2322,7 +2343,7 @@ Employee
 
 # 138. Company Memory
 
-MYCORP는 회사에 대해 장기적으로 기억해야 한다.
+MYCORP24는 회사에 대해 장기적으로 기억해야 한다.
 
 Brand
 
@@ -2412,7 +2433,7 @@ AI 직원의 System Context에 반영.
 
 "비서실장, 우리 회사 알아서 좀 챙겨봐."
 
-그리고 MYCORP가 실제 회사 데이터를 확인하여 필요한 업무를 판단하고 제안해야 한다.
+그리고 MYCORP24가 실제 회사 데이터를 확인하여 필요한 업무를 판단하고 제안해야 한다.
 
 단 비용 발생 또는 외부 영향 Action은 승인 정책을 따른다.
 
@@ -2536,7 +2557,7 @@ Premium Corporate Identity.
 
 일반 AI Sparkle Logo를 피한다.
 
-MYCORP가 "기업"으로 느껴져야 한다.
+MYCORP24가 "기업"으로 느껴져야 한다.
 
 Building
 
@@ -2749,7 +2770,7 @@ Face ID
 
 # 153. 최종 제품 정의
 
-MYCORP는:
+MYCORP24는:
 
 Chatbot이 아니다.
 
@@ -2771,7 +2792,7 @@ CRM도 아니다.
 
 사용자는 자신의 기업을 운영한다.
 
-MYCORP는 사용자의 지시를
+MYCORP24는 사용자의 지시를
 
 기업 업무로 번역하고,
 
@@ -2799,7 +2820,7 @@ MYCORP는 사용자의 지시를
 
 AI 사용법을 배울 필요도 없습니다.
 
-MYCORP에 출근하십시오.
+MYCORP24에 출근하십시오.
 
 비서실장에게 지시하십시오.
 
@@ -2811,21 +2832,23 @@ AI 임직원들이 일합니다.
 
 결재하십시오.
 
-**사장님에서 회장님으로.**
+**사장님에서, 회장님으로.**
 
-**MYCORP가 당신의 회사를 만들어드립니다.**
+**이제 직접 하지 말고, 지시하세요.**
+
+**365일 24시간, 쉬지 않고 움직이는 당신의 AI 회사.**
 
 ---
 
 ## Global Lockup
 
-**MYCORP**
+**MYCORP24**
 
-**Your AI Company.**
+**Your Company. Always On.**
 
-*You lead. Your AI company works.*
+**Stop doing. Start leading.**
 
-**One founder. An entire company.**
+*Others give you an AI assistant. MYCORP24 gives you a company.*
 
 > 한국 카피와 글로벌 카피는 서로의 번역이 아니다. 각각 작성한다.
 > 표기·사용 규칙은 [`docs/brand/BRAND.md`](../brand/BRAND.md) §2, §6.
@@ -2834,7 +2857,7 @@ AI 임직원들이 일합니다.
 
 # 155. Claude Code 추가 최종 명령
 
-기존 MYCORP SaaS 명세와 본 확장 명세를 하나의 Product Specification으로 취급하라.
+기존 MYCORP24 SaaS 명세와 본 확장 명세를 하나의 Product Specification으로 취급하라.
 
 웹 전용으로 구현하지 말 것.
 
@@ -2874,4 +2897,4 @@ iOS App Store 및 Google Play Store에 실제 배포 가능한 구조로 작성�
 
 그러나 외부 영향, 비용, 고객 접촉 및 정책상 결재가 필요한 업무는 회장에게 결재를 요청해야 한다.
 
-이 철학이 MYCORP 전체 Architecture와 UX의 최상위 원칙이다.
+이 철학이 MYCORP24 전체 Architecture와 UX의 최상위 원칙이다.

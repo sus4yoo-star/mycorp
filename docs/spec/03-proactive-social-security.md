@@ -1,16 +1,16 @@
-# MYCORP 추가 핵심 명세
+# MYCORP24 추가 핵심 명세
 ## Proactive AI Company + Social Company Network + Enterprise Security
 
 ---
 
 > **브랜드 정본:** [`docs/brand/BRAND.md`](../brand/BRAND.md) · **리네이밍 이력:** [`docs/spec/README.md`](./README.md)
-> 제품명은 **MYCORP**다. `AI Company`는 제품 카테고리명으로만 사용한다.
+> 제품명은 **MYCORP24**다. `AI Company`는 제품 카테고리명으로만 사용한다.
 > 브랜드·네이밍·호칭에서 이 명세와 브랜드 문서가 충돌하면 브랜드 문서가 우선한다.
 
 
-# 156. MYCORP는 먼저 제안하는 회사여야 한다
+# 156. MYCORP24는 먼저 제안하는 회사여야 한다
 
-MYCORP의 AI 직원들은 사용자의 지시를 기다리기만 해서는 안 된다.
+MYCORP24의 AI 직원들은 사용자의 지시를 기다리기만 해서는 안 된다.
 
 각 부서는 담당 영역을 지속적으로 관찰하고, 기회나 위험을 발견하면 비서실장에게 보고한다.
 
@@ -34,7 +34,7 @@ MYCORP의 AI 직원들은 사용자의 지시를 기다리기만 해서는 안 �
 
 # 157. 경쟁사 Intelligence System
 
-MYCORP에는 회사마다 별도의 **Competitor Watchlist**가 존재한다.
+MYCORP24에는 회사마다 별도의 **Competitor Watchlist**가 존재한다.
 
 사용자가 직접 경쟁사를 지정할 수도 있고 AI가 새로운 경쟁사를 발굴할 수도 있다.
 
@@ -116,7 +116,7 @@ AI가 주기적으로 경쟁사 변화를 감지한다.
 
 경쟁사가 잘한다고 무조건 따라 하지 않는다.
 
-MYCORP는 다음 기준으로 벤치마킹 여부를 판단한다.
+MYCORP24는 다음 기준으로 벤치마킹 여부를 판단한다.
 
 - Brand Fit
 - Audience Fit
@@ -155,7 +155,7 @@ MYCORP는 다음 기준으로 벤치마킹 여부를 판단한다.
 
 ↓
 
-AI가 MYCORP의 상황에 맞게 재설계
+AI가 MYCORP24의 상황에 맞게 재설계
 
 ---
 
@@ -193,7 +193,7 @@ Proposal에는:
 
 # 162. 회장은 매번 일을 시키지 않아도 된다
 
-사용자가 MYCORP에 며칠 동안 지시하지 않더라도 회사는 완전히 멈추지 않는다.
+사용자가 MYCORP24에 며칠 동안 지시하지 않더라도 회사는 완전히 멈추지 않는다.
 
 승인 없이 가능한 범위에서:
 
@@ -212,7 +212,7 @@ Proposal에는:
 
 # 163. Founder Accountability
 
-MYCORP는 AI만 일하는 제품이 아니다.
+MYCORP24는 AI만 일하는 제품이 아니다.
 
 **사용자도 회사를 운영하도록 도와야 한다.**
 
@@ -277,7 +277,7 @@ AI Employee Task와 Human Founder Task를 구분한다.
 
 예:
 
-**MYCORP Momentum**
+**MYCORP24 Momentum**
 
 82 / 100
 
@@ -377,7 +377,7 @@ Data Director — Daniel
 
 # 169. Company Branding
 
-MYCORP 내 회사에도 자체 브랜드가 있다.
+MYCORP24 내 회사에도 자체 브랜드가 있다.
 
 설정:
 
@@ -396,17 +396,17 @@ MYCORP 내 회사에도 자체 브랜드가 있다.
 
 ---
 
-# 170. MYCORP Public Company Profile
+# 170. MYCORP24 Public Company Profile
 
 사용자는 자신의 AI 기업 일부를 외부에 공개할 수 있다.
 
 공개 URL 예:
 
-`mycorp.com/@alex`
+`mycorp24.com/@alex`
 
 또는
 
-`mycorp.com/company/amov`
+`mycorp24.com/company/amov`
 
 공개 프로필:
 
@@ -428,7 +428,7 @@ MYCORP 내 회사에도 자체 브랜드가 있다.
 
 # 171. Shareable Company Dashboard
 
-사용자가 자신의 MYCORP를 자랑하고 싶게 만들어야 한다.
+사용자가 자신의 MYCORP24를 자랑하고 싶게 만들어야 한다.
 
 예:
 
@@ -446,7 +446,7 @@ Current Momentum: 91
 
 Founded: 2026
 
-[MYCORP 보기]
+[MYCORP24 보기]
 
 [조직도 보기]
 
@@ -459,7 +459,7 @@ SNS에 공유 가능한 자동 이미지 생성.
 예:
 
 - “우리 회사 AI 직원이 50명을 넘었습니다.”
-- “MYCORP 설립 100일.”
+- “MYCORP24 설립 100일.”
 - “이번 달 AI 직원이 2,841건의 업무를 처리했습니다.”
 - “이번 달 매출 목표 120% 달성.”
 
@@ -475,7 +475,7 @@ SNS에 공유 가능한 자동 이미지 생성.
 
 # 173. Company Showcase
 
-MYCORP 안에 다른 사용자들의 공개 기업을 볼 수 있는 공간을 만든다.
+MYCORP24 안에 다른 사용자들의 공개 기업을 볼 수 있는 공간을 만든다.
 
 **Company Showcase**
 
@@ -492,7 +492,7 @@ MYCORP 안에 다른 사용자들의 공개 기업을 볼 수 있는 공간을 �
 - Consulting
 - Local Business
 
-사용자는 다른 MYCORP 기업의:
+사용자는 다른 MYCORP24 기업의:
 
 - 조직구조
 - 공개 Workflow
@@ -525,7 +525,7 @@ MYCORP 안에 다른 사용자들의 공개 기업을 볼 수 있는 공간을 �
 
 ↓
 
-MYCORP가 해당 Workflow 구조를 참고하여 사용자 회사에 맞게 재구성.
+MYCORP24가 해당 Workflow 구조를 참고하여 사용자 회사에 맞게 재구성.
 
 ---
 
@@ -545,7 +545,7 @@ Tokyo Beauty Studio
 
 ↓
 
-MYCORP가 현재 Integration과 회사 상황을 확인
+MYCORP24가 현재 Integration과 회사 상황을 확인
 
 ↓
 
@@ -563,15 +563,15 @@ Github의 Fork와 비슷하지만 **기업 운영 Workflow를 Fork**하는 개�
 
 Creator가 잘 운영되는 SaaS 기업을 Follow.
 
-또는 카페 사장이 성장 중인 다른 카페 MYCORP를 Follow.
+또는 카페 사장이 성장 중인 다른 카페 MYCORP24를 Follow.
 
 공개된 변화가 있을 때만 Feed에 표시.
 
 ---
 
-# 177. MYCORP Network
+# 177. MYCORP24 Network
 
-장기적으로 MYCORP는 단순 SaaS가 아니라:
+장기적으로 MYCORP24는 단순 SaaS가 아니라:
 
 **AI Company Network**
 
@@ -592,7 +592,7 @@ Creator가 잘 운영되는 SaaS 기업을 Follow.
 
 # 178. Company Collaboration
 
-사용자가 허용하면 MYCORP 기업끼리 협업 가능.
+사용자가 허용하면 MYCORP24 기업끼리 협업 가능.
 
 예:
 
@@ -630,7 +630,7 @@ Visibility:
 
 # 180. Enterprise Security Classification
 
-MYCORP에서 데이터와 문서에 실제 기업식 보안 등급을 적용한다.
+MYCORP24에서 데이터와 문서에 실제 기업식 보안 등급을 적용한다.
 
 한국:
 
@@ -775,7 +775,7 @@ Authorized Use Only
 - 공개
 - 링크를 가진 사람
 - 특정 사용자
-- 특정 MYCORP 기업
+- 특정 MYCORP24 기업
 - 파트너
 - 기간 제한
 - Download 허용
@@ -820,13 +820,13 @@ Finance 접근.
 
 # 189. Social Sharing Should Feel Aspirational
 
-MYCORP를 사용하는 사람이 자신의 회사를 공유하면서 이렇게 느껴야 한다.
+MYCORP24를 사용하는 사람이 자신의 회사를 공유하면서 이렇게 느껴야 한다.
 
 “나 혼자 일하는 사람이 아니라 회사 하나를 운영하고 있다.”
 
 공유 페이지:
 
-**MYCORP COMPANY PROFILE**
+**MYCORP24 COMPANY PROFILE**
 
 AMOV
 
@@ -888,7 +888,7 @@ Operating in 4 Countries
 
 # 192. Community Knowledge
 
-사용자들이 공개한 Workflow 중 성과가 좋은 것들을 MYCORP가 추천한다.
+사용자들이 공개한 Workflow 중 성과가 좋은 것들을 MYCORP24가 추천한다.
 
 예:
 
@@ -902,7 +902,7 @@ Operating in 4 Countries
 
 사용자의 경쟁사는 꼭 실명 경쟁사만 의미하지 않는다.
 
-비슷한 MYCORP 기업을 익명 Benchmark Group으로 비교할 수 있다.
+비슷한 MYCORP24 기업을 익명 Benchmark Group으로 비교할 수 있다.
 
 예:
 
@@ -949,9 +949,9 @@ Operating in 4 Countries
 
 ---
 
-# 196. Long-Term MYCORP Experience
+# 196. Long-Term MYCORP24 Experience
 
-MYCORP를 오래 사용할수록 회사가 실제로 살아있는 느낌이 들어야 한다.
+MYCORP24를 오래 사용할수록 회사가 실제로 살아있는 느낌이 들어야 한다.
 
 월요일:
 AI 직원들이 계획을 수립.
@@ -970,7 +970,7 @@ AI 직원들이 계획을 수립.
 
 회장은 기업을 키워간다.
 
-MYCORP는 그 옆에서 끊임없이:
+MYCORP24는 그 옆에서 끊임없이:
 
 - 관찰하고
 - 분석하고
@@ -984,13 +984,13 @@ MYCORP는 그 옆에서 끊임없이:
 
 # 197. 최종 제품 철학 확장
 
-MYCORP는 단순히:
+MYCORP24는 단순히:
 
 “명령하면 실행하는 AI”
 
 가 아니다.
 
-MYCORP는:
+MYCORP24는:
 
 **생각하는 회사**
 
@@ -1020,7 +1020,7 @@ MYCORP는:
 
 # 198. Social Philosophy
 
-사람들이 MYCORP를 공유하는 이유는 단순 자랑이 아니다.
+사람들이 MYCORP24를 공유하는 이유는 단순 자랑이 아니다.
 
 다른 1인 창업자들이:
 
@@ -1036,9 +1036,9 @@ MYCORP는:
 
 ---
 
-# 199. MYCORP Network Vision
+# 199. MYCORP24 Network Vision
 
-장기적으로 전 세계 수백만 개의 MYCORP 회사가 만들어진다.
+장기적으로 전 세계 수백만 개의 MYCORP24 회사가 만들어진다.
 
 각 회사는:
 
@@ -1054,7 +1054,7 @@ MYCORP는:
 
 그리고 공개 가능한 범위 내에서 서로 배우고 연결된다.
 
-MYCORP는 결국:
+MYCORP24는 결국:
 
 **AI 기업을 만드는 플랫폼**
 
@@ -1068,6 +1068,6 @@ MYCORP는 결국:
 
 # 200. 핵심 한 문장
 
-**MYCORP는 당신에게 AI 직원을 주는 서비스가 아니다.**
+**MYCORP24는 당신에게 AI 직원을 주는 서비스가 아니다.**
 
 **당신의 회사를 만들고, 회사가 스스로 일하고 생각하고 성장하도록 만드는 플랫폼이다.**
