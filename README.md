@@ -91,6 +91,7 @@ AI prepares.  Founder approves.  Company executes.
 pnpm install
 pnpm dev          # 전체 개발 서버
 pnpm test         # 전 패키지 테스트
+pnpm test:db      # RLS 정책 테스트 (임시 Postgres)
 pnpm clearance    # 도메인 클리어런스 RDAP 조회
 ```
 

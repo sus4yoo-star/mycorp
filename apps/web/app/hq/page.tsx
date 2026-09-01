@@ -2,26 +2,74 @@ import Link from 'next/link';
 import type { Division } from '@mycorp24/agent-types';
 import {
   ORG_PRESETS,
+  formatAddress,
   formatFloor,
   resolveFloorStack,
   resolvePreset,
   sortTopDown,
   type IndustryPreset,
 } from '@mycorp24/business-logic';
+import { getCurrentCompany, listDivisions, listPendingApprovals } from '@mycorp24/db';
+import { getServerClient, getSessionUser } from '../../lib/supabase/server';
+import { isSupabaseConfigured } from '../../lib/supabase/config';
 
 /**
  * HQ building view.
  *
- * The floor numbers are not hardcoded. They come from `resolveFloorStack`,
- * which implements spec §220.3: 1F-9F, B1 and B2 are fixed, 10F and above are
- * dynamic, and the chairman floor is always the top floor. Switching preset
- * below shows the tower growing — the point of §136 and §214.
+ * Floor numbers are computed by `resolveFloorStack` (spec §220.3), never
+ * hardcoded: 1F-9F, B1 and B2 are fixed, 10F and above are dynamic, and the
+ * chairman floor is always the top.
+ *
+ * With Supabase configured and a founder signed in this renders their real
+ * organization. Without it, the preset switcher shows how the tower grows —
+ * labelled as a preview so nobody mistakes it for their company.
  */
 
 const PRESET_ORDER: IndustryPreset[] = ['LOCAL_BUSINESS', 'CREATOR', 'SOLO_SAAS'];
 
 const isPreset = (v: string | undefined): v is IndustryPreset =>
   v !== undefined && (PRESET_ORDER as string[]).includes(v);
+
+interface View {
+  readonly title: string;
+  readonly divisions: Division[];
+  readonly subtitle: string;
+  readonly live: boolean;
+}
+
+async function load(preset: IndustryPreset): Promise<View> {
+  if (isSupabaseConfigured()) {
+    const user = await getSessionUser();
+    if (user) {
+      const db = await getServerClient();
+      const current = await getCurrentCompany(db, user.id);
+      if (current) {
+        const [divisions, pending] = await Promise.all([
+          listDivisions(db, current.companyId),
+          listPendingApprovals(db, current.companyId),
+        ]);
+        const addr = formatAddress(current.founder);
+        return {
+          title: current.companyName,
+          divisions,
+          subtitle:
+            pending.length > 0
+              ? `${addr}, 결재 대기 ${pending.length}건입니다.`
+              : `${addr}, 결재 대기 중인 안건은 없습니다.`,
+          live: true,
+        };
+      }
+    }
+  }
+
+  const p = resolvePreset(preset);
+  return {
+    title: '본사',
+    divisions: [...p.divisions],
+    subtitle: `${p.ko} · 임원 ${p.executives.length}명`,
+    live: false,
+  };
+}
 
 export default async function HQ({
   searchParams,
@@ -30,30 +78,30 @@ export default async function HQ({
 }) {
   const { preset: raw } = await searchParams;
   const key: IndustryPreset = isPreset(raw) ? raw : 'LOCAL_BUSINESS';
-  const preset = resolvePreset(key);
-  const floors = sortTopDown(resolveFloorStack(preset.divisions as Division[]));
+  const view = await load(key);
+  const floors = sortTopDown(resolveFloorStack(view.divisions));
 
   return (
     <main className="wrap" style={{ paddingBlock: '3rem' }}>
-      <h1 style={{ fontSize: '1.6rem', margin: '0 0 0.35rem' }}>본사</h1>
-      <p className="rule-line" style={{ margin: '0 0 2rem' }}>
-        {floors.length}개 층 · 임원 {preset.executives.length}명
-        {preset.specialists.length > 0
-          ? ` · Specialist ${preset.specialists.length}`
-          : ''}
+      <h1 style={{ fontSize: '1.6rem', margin: '0 0 0.35rem' }}>{view.title}</h1>
+      <p className="rule-line" style={{ margin: '0 0 0.4rem' }}>
+        {floors.length}개 층
       </p>
+      <p style={{ color: 'var(--ink-soft)', margin: '0 0 2rem' }}>{view.subtitle}</p>
 
-      <div className="switcher">
-        {PRESET_ORDER.map((p) => (
-          <Link
-            key={p}
-            href={`/hq?preset=${p}`}
-            aria-current={p === key ? 'page' : undefined}
-          >
-            {ORG_PRESETS[p].ko}
-          </Link>
-        ))}
-      </div>
+      {!view.live && (
+        <div className="switcher">
+          {PRESET_ORDER.map((p) => (
+            <Link
+              key={p}
+              href={`/hq?preset=${p}`}
+              aria-current={p === key ? 'page' : undefined}
+            >
+              {ORG_PRESETS[p].ko}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <table className="floors">
         <thead>
@@ -75,9 +123,9 @@ export default async function HQ({
       </table>
 
       <p style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
-        층수는 회사마다 다릅니다. 1F–9F와 B1·B2는 어떤 회사에서도 번호가 같고,
-        10F 이상은 회사가 임명한 임원 수만큼 존재합니다. 회장실은 층 번호와
-        무관하게 언제나 최상층입니다.
+        {view.live
+          ? '층수는 회사마다 다릅니다. 부서가 신설되면 층이 삽입되고 타워가 자랍니다. 회장실은 언제나 최상층입니다.'
+          : '미리보기입니다. 업종을 바꾸면 타워가 달라집니다. 로그인하시면 실제 회사의 본사가 표시됩니다.'}
       </p>
     </main>
   );

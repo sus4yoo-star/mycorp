@@ -21,6 +21,7 @@ pnpm --filter @mycorp24/web dev # 웹만
 | `pnpm typecheck` | 전 패키지 타입 검사 |
 | `pnpm test` | 전 패키지 테스트 |
 | `pnpm build` | 전 패키지 빌드 |
+| `pnpm test:db` | **RLS 정책 테스트** — 임시 Postgres를 띄워 정책을 공격 |
 | `pnpm clearance` | 도메인 클리어런스 RDAP 조회 (§ 아래) |
 
 ## 구조
@@ -36,6 +37,8 @@ packages/
   integrations/       IntegrationAdapter 계약 · 카탈로그 · Capability Resolver
   tool-gateway/       외부 실행 파이프라인 (아래 참조)
   ai-gateway/         AI Provider Abstraction (Claude 기본)
+  chat/               비서실장 Intent 분류 · Action Router · UI↔Chat parity
+  db/                 Supabase 타입 · 데이터 접근 계층
   auth/               멤버십 · need-to-know
   api-client/         웹·모바일 공용 API 클라이언트
 supabase/migrations/  멀티테넌트 스키마 + RLS
@@ -92,6 +95,19 @@ permission → risk → approval policy → credential → adapter → audit
 `integration_credentials`는 RLS가 켜져 있고 **정책이 하나도 없다.**
 anon·authenticated 역할은 전부 거부되며 service role로만 접근한다. 이 상태를 유지한다.
 
+### Service role 클라이언트를 요청 경로에 두지 않는다
+
+`apps/web/lib/supabase/service.ts`는 RLS를 우회한다. 자격증명 복호화, 스케줄된
+Agent 실행, 감사실의 원본 조회처럼 **사용자 세션이 없는 것이 정당한 작업**에만 쓴다.
+다른 모든 곳에서는 RLS가 안전망이지만 여기에는 안전망이 없다.
+`server-only`가 클라이언트 번들에 섞이는 것을 빌드 오류로 만든다.
+
+### 회사 생성은 `found_company()`로만
+
+`companies`에는 INSERT 정책이 없다. 회사 생성·founder 멤버십·호칭 저장이
+한 트랜잭션에서 일어나야 하기 때문이다. 클라이언트에서 두 번 호출하면
+멤버가 없는 회사가 잠깐 존재하고, id를 아는 사람이 가로챌 수 있다.
+
 ## AI 호출
 
 ```ts
@@ -107,6 +123,19 @@ const result = await ai.complete({
 
 비용은 **모델을 낮춰서가 아니라 `tier`(effort)로 조절한다.** 모델을 내리는 것은
 회장의 결정이지 우리의 결정이 아니고, 모델을 섞으면 프롬프트 캐시 네임스페이스가 갈린다.
+
+## 데이터베이스
+
+```bash
+pnpm test:db
+```
+
+임시 Postgres 클러스터를 띄워 마이그레이션을 적용하고 **정책을 공격한다.**
+Docker도, Supabase 프로젝트도, 네트워크도 필요 없다.
+자세한 내용은 [`supabase/README.md`](../supabase/README.md).
+
+> 이 테스트는 첫 실행에서 실제 버그를 잡았다 — `0001`만으로는 회사 설립이
+> RLS 때문에 불가능했다. 정책 버그는 코드 리뷰로 안 잡힌다.
 
 ## 네이밍 클리어런스
 
@@ -124,8 +153,8 @@ Netlify (`netlify.toml`). 루트에서 빌드하고 `apps/web`을 배포한다.
 
 ## 아직 없는 것
 
-비서실장 Chat, Chat Action Router, 실제 Integration Adapter 구현, Push,
-Company Memory, 경쟁사 Watchlist, 공개 기업 프로필.
+실제 Integration Adapter 구현, Push, Company Memory, 경쟁사 Watchlist,
+공개 기업 프로필, 소셜·생체 인증.
 
 **비어 있는 골격을 미리 만들지 않았다.** 동작하지 않는 껍데기는 그것이 존재한다고
 착각하게 만드는 코드를 부른다 — 이 제품에서는 §151 위반의 시작점이다.

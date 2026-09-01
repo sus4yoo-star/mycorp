@@ -196,3 +196,45 @@ footer.site { border-top: 1px solid var(--line); padding-block: 2.5rem; color: v
   cursor: pointer;
 }
 .composer button:disabled { opacity: 0.5; cursor: default; }
+
+/* --- forms --- */
+.field { display: flex; flex-direction: column; gap: 0.4rem; }
+.field > span, .field > legend { font-size: 0.82rem; color: var(--ink-soft); letter-spacing: 0.02em; }
+.field input[type='text'], .field input[type='email'], .field input:not([type]) {
+  font: inherit;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px;
+}
+.field small { font-size: 0.78rem; color: var(--ink-soft); }
+
+.choice { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid var(--line); background: var(--paper); padding: 0.4rem 0.8rem; border-radius: 2px; font-size: 0.85rem; cursor: pointer; }
+.choice input { accent-color: var(--ink); }
+
+.decision { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.decision input[type='text'] {
+  flex: 1;
+  min-width: 12rem;
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 2px;
+}
+.decision button {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--paper);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.decision button.ghost { background: transparent; color: var(--ink-soft); border-color: var(--line); }
+.decision button.ghost:hover { color: var(--ink); border-color: var(--ink); }
