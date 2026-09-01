@@ -48,6 +48,7 @@ Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
 |---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | **비밀. RLS를 무시합니다** |
 | `MYCORP24_CREDENTIAL_KEY` | **비밀.** OAuth 토큰 암호화 키 |
+| `MYCORP24_CRON_SECRET` | **비밀.** 경쟁사 관찰 스케줄러와 공유하는 값 |
 | `ANTHROPIC_API_KEY` | **비밀** |
 | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` | 연동을 쓸 때만 |
 | `META_OAUTH_CLIENT_ID` / `_SECRET` | 연동을 쓸 때만 |
@@ -63,6 +64,24 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 > 바꾸면 기존 연동이 전부 끊깁니다. 유출되면 암호화가 무의미해집니다.
 
 ---
+
+### 경쟁사 자동 관찰
+
+매일 아침 경쟁사를 확인하고 제안을 준비하는 워크플로가 있습니다
+(`.github/workflows/intelligence.yml`, 06:10 KST).
+
+GitHub 시크릿 2개를 추가하면 켜집니다:
+
+| 시크릿 | 값 |
+|---|---|
+| `MYCORP24_APP_URL` | 배포된 주소 (예: `https://mycorp24.netlify.app`) |
+| `MYCORP24_CRON_SECRET` | 아래로 생성 · **Netlify 환경변수에도 같은 값**을 넣습니다 |
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+없으면 워크플로는 실패하지 않고 건너뜁니다.
 
 ## 2. 실행
 

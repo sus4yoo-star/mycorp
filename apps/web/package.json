@@ -22,7 +22,9 @@
     "server-only": "^0.0.1",
     "@mycorp24/integrations": "workspace:*",
     "@mycorp24/vault": "workspace:*",
-    "@mycorp24/tool-gateway": "workspace:*"
+    "@mycorp24/tool-gateway": "workspace:*",
+    "@mycorp24/intelligence": "workspace:*",
+    "@mycorp24/ai-gateway": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

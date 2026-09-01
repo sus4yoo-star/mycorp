@@ -11,11 +11,13 @@ grant select, insert, update, delete on
   companies, memberships, founder_identities, divisions, executives, agents,
   tasks, approval_policies, approvals, proposals, risk_register,
   integration_connections, oauth_states, company_memory,
-  company_constitution, competitors, competitor_signals, founder_tasks
+  company_constitution, competitors, competitor_signals, founder_tasks,
+  competitor_snapshots, intelligence_runs
 to authenticated;
 
 grant select, insert on audit_events to authenticated;
 grant usage, select on sequence audit_events_id_seq to authenticated;
+grant usage, select on sequence intelligence_runs_id_seq to authenticated;
 
 grant select on integrations_catalog to anon, authenticated;
 

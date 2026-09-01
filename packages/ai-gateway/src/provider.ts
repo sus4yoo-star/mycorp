@@ -43,6 +43,8 @@ export interface AiProvider {
   complete(req: CompletionRequest): Promise<CompletionResult>;
   /** Yields text deltas. Use for anything the founder watches in real time. */
   stream(req: CompletionRequest): AsyncIterable<string>;
+  /** Answer constrained to a schema. Throws rather than returning a bad shape. */
+  completeStructured<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>>;
 }
 
 export class AiProviderError extends Error {
@@ -54,4 +56,22 @@ export class AiProviderError extends Error {
     super(message);
     this.name = 'AiProviderError';
   }
+}
+
+/**
+ * A request whose answer must fit a schema.
+ *
+ * Used wherever a model's output becomes a database row. Free text that we then
+ * regex into fields is how an agent ends up inventing a field value nobody
+ * asked for; a schema makes the failure loud instead.
+ */
+export interface StructuredRequest<T> extends CompletionRequest {
+  /** Zod schema the answer must satisfy. */
+  readonly schema: import('zod').ZodType<T>;
+}
+
+export interface StructuredResult<T> {
+  readonly value: T;
+  readonly model: string;
+  readonly usage: { readonly inputTokens: number; readonly outputTokens: number };
 }

@@ -1,9 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import {
   AiProviderError,
   type AiProvider,
   type CompletionRequest,
   type CompletionResult,
+  type StructuredRequest,
+  type StructuredResult,
   type TaskTier,
 } from './provider';
 
@@ -85,6 +88,46 @@ export class AnthropicProvider implements AiProvider {
       };
       return result;
     } catch (err) {
+      throw toProviderError(err);
+    }
+  }
+
+  async completeStructured<T>(req: StructuredRequest<T>): Promise<StructuredResult<T>> {
+    try {
+      const { model, max_tokens, system, messages, thinking, output_config } = this.params(
+        req,
+        MAX_TOKENS_BLOCKING,
+      );
+
+      const res = await this.client.messages.parse({
+        model,
+        max_tokens,
+        ...(system ? { system } : {}),
+        messages,
+        thinking,
+        output_config: {
+          ...output_config,
+          format: zodOutputFormat(req.schema),
+        },
+      });
+
+      // `parsed_output` is null when the answer did not satisfy the schema.
+      // Failing here is the point: a half-parsed proposal must never reach the
+      // database as if the model had produced it.
+      if (res.parsed_output == null) {
+        throw new AiProviderError('the model did not return a valid structured answer', false);
+      }
+
+      return {
+        value: res.parsed_output as T,
+        model: res.model,
+        usage: {
+          inputTokens: res.usage.input_tokens,
+          outputTokens: res.usage.output_tokens,
+        },
+      };
+    } catch (err) {
+      if (err instanceof AiProviderError) throw err;
       throw toProviderError(err);
     }
   }

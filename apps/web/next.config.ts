@@ -11,6 +11,8 @@ const config: NextConfig = {
     '@mycorp24/integrations',
     '@mycorp24/vault',
     '@mycorp24/tool-gateway',
+    '@mycorp24/intelligence',
+    '@mycorp24/ai-gateway',
   ],
 };
 

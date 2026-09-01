@@ -692,3 +692,148 @@ export async function decideProposal(
     .eq('status', 'OPEN');
   if (res.error) throw new DbError('deciding the proposal', res.error);
 }
+
+// ---------------------------------------------------------------------------
+// Competitor snapshots and collection runs — spec §158
+// ---------------------------------------------------------------------------
+
+export const getSnapshots = async (db: Db, companyId: string) =>
+  unwrap(
+    await db.from('competitor_snapshots').select('*').eq('company_id', companyId),
+    'loading competitor snapshots',
+  );
+
+export async function saveSnapshot(
+  db: Db,
+  input: {
+    readonly companyId: string;
+    readonly competitorId: string;
+    readonly url: string;
+    readonly fingerprint: string;
+    readonly content: string;
+    readonly prices: readonly number[];
+  },
+): Promise<void> {
+  const res = await db.from('competitor_snapshots').upsert(
+    {
+      competitor_id: input.competitorId,
+      company_id: input.companyId,
+      url: input.url,
+      fingerprint: input.fingerprint,
+      // Capped upstream; the column is not a place to keep whole pages.
+      content: input.content.slice(0, 40_000),
+      prices: [...input.prices],
+      taken_at: new Date().toISOString(),
+    },
+    { onConflict: 'competitor_id' },
+  );
+  if (res.error) throw new DbError('saving the competitor snapshot', res.error);
+}
+
+export async function recordSignals(
+  db: Db,
+  companyId: string,
+  signals: readonly {
+    readonly competitorId: string;
+    readonly kind: string;
+    readonly summary: string;
+    readonly significance: number;
+    readonly evidence: Readonly<Record<string, unknown>>;
+  }[],
+): Promise<void> {
+  if (signals.length === 0) return;
+  const res = await db.from('competitor_signals').insert(
+    signals.map((s) => ({
+      company_id: companyId,
+      competitor_id: s.competitorId,
+      kind: s.kind,
+      summary: s.summary,
+      significance: s.significance,
+      evidence: s.evidence as Record<string, unknown>,
+    })),
+  );
+  if (res.error) throw new DbError('recording competitor signals', res.error);
+}
+
+export async function createProposals(
+  db: Db,
+  companyId: string,
+  proposals: readonly {
+    readonly type: string;
+    readonly title: string;
+    readonly background: string;
+    readonly recommendation: string;
+    readonly expectedEffect?: string;
+    readonly risk?: string;
+    readonly priority: number;
+  }[],
+): Promise<number> {
+  if (proposals.length === 0) return 0;
+  const res = await db.from('proposals').insert(
+    proposals.map((p) => ({
+      company_id: companyId,
+      proposal_type: p.type,
+      title: p.title,
+      background: p.background,
+      recommendation: p.recommendation,
+      ...(p.expectedEffect ? { expected_effect: p.expectedEffect } : {}),
+      ...(p.risk ? { risk: p.risk } : {}),
+      priority: p.priority,
+    })),
+  );
+  if (res.error) throw new DbError('creating proposals', res.error);
+  return proposals.length;
+}
+
+export const listRecentlyDeclined = async (db: Db, companyId: string, limit = 10) => {
+  const rows = unwrap(
+    await db
+      .from('proposals')
+      .select('title')
+      .eq('company_id', companyId)
+      .eq('status', 'DECLINED')
+      .order('decided_at', { ascending: false })
+      .limit(limit),
+    'listing declined proposals',
+  );
+  return rows.map((r) => r.title);
+};
+
+/**
+ * Open a run record before doing the work, close it after.
+ *
+ * A failed run must leave a trace: "no signals today" and "we could not check
+ * today" are the same to a founder unless we wrote down which happened (§151).
+ */
+export async function startIntelligenceRun(db: Db, companyId: string): Promise<number> {
+  const row = unwrap(
+    await db.from('intelligence_runs').insert({ company_id: companyId }).select('id').single(),
+    'starting the intelligence run',
+  );
+  return row.id;
+}
+
+export async function finishIntelligenceRun(
+  db: Db,
+  runId: number,
+  result: {
+    readonly competitorsChecked: number;
+    readonly signalsFound: number;
+    readonly proposalsCreated: number;
+    readonly errors: readonly string[];
+    readonly sanitised: readonly string[];
+  },
+): Promise<void> {
+  const res = await db
+    .from('intelligence_runs')
+    .update({
+      finished_at: new Date().toISOString(),
+      competitors_checked: result.competitorsChecked,
+      signals_found: result.signalsFound,
+      proposals_created: result.proposalsCreated,
+      errors: [...result.errors],
+      sanitised: [...result.sanitised],
+    })
+    .eq('id', runId);
+  if (res.error) throw new DbError('finishing the intelligence run', res.error);
+}

@@ -219,6 +219,28 @@ export type ProposalRow = {
   created_at: string;
 };
 
+export type CompetitorSnapshotRow = {
+  competitor_id: string;
+  company_id: string;
+  url: string;
+  fingerprint: string;
+  content: string;
+  prices: number[];
+  taken_at: string;
+};
+
+export type IntelligenceRunRow = {
+  id: number;
+  company_id: string;
+  started_at: string;
+  finished_at: string | null;
+  competitors_checked: number;
+  signals_found: number;
+  proposals_created: number;
+  errors: string[];
+  sanitised: string[];
+};
+
 export type AuditEventRow = {
   id: number;
   company_id: string;
@@ -303,6 +325,15 @@ export type Database = {
       proposals: Table<
         ProposalRow,
         Pick<ProposalRow, 'company_id' | 'proposal_type' | 'title'> & Partial<ProposalRow>
+      >;
+      competitor_snapshots: Table<
+        CompetitorSnapshotRow,
+        Pick<CompetitorSnapshotRow, 'competitor_id' | 'company_id' | 'url' | 'fingerprint' | 'content'> &
+          Partial<CompetitorSnapshotRow>
+      >;
+      intelligence_runs: Table<
+        IntelligenceRunRow,
+        Pick<IntelligenceRunRow, 'company_id'> & Partial<IntelligenceRunRow>
       >;
       audit_events: Table<
         AuditEventRow,
