@@ -37,8 +37,9 @@ Founder / Chairman  →  Chief of Staff (비서실장)  →  Executive Board  �
 | [`docs/spec/01-headquarters-organization.md`](docs/spec/01-headquarters-organization.md) | 본사 층별 구조와 전체 조직도 (12F ~ B2) |
 | [`docs/spec/02-omnichannel-web-ios-android.md`](docs/spec/02-omnichannel-web-ios-android.md) | Web + iOS + Android, Integration Framework, Tool Gateway, 승인 정책 (§72–155) |
 | [`docs/spec/03-proactive-social-security.md`](docs/spec/03-proactive-social-security.md) | 선제 제안 엔진, 경쟁사 인텔리전스, 기업 네트워크, 보안 등급 (§156–200) |
+| [`docs/spec/04-organization-expansion.md`](docs/spec/04-organization-expansion.md) | 법무·보안·기술·제품·감사·리스크·글로벌 조직 확장, 3선 방어 (§201–220) |
 
-세 문서는 **하나의 Product Specification**으로 취급한다.
+네 문서는 **하나의 Product Specification**으로 취급한다. 섹션 번호 §72–220은 연속한다.
 
 ---
 
@@ -88,3 +89,12 @@ Founder / Chairman  →  Chief of Staff (비서실장)  →  Executive Board  �
 - **보안 우회 금지** — CAPTCHA·2FA·약관 우회 없음 (§111)
 - **거짓 실행 금지** — 못 하는 일을 했다고 말하지 않는다 (§151)
 - **비용·게시·발송·예약 변경은 결재를 거친다** (§112)
+- **3선 방어** — 1·2차(부서 검토 / Permission·Risk·Legal)는 Tool Gateway 안에서 차단형, 3차(감사실)는 실행 경로 밖에서 사후 독립 감사 (§217, §220.4)
+- **감사실·리스크관리실은 회장 직속** — 어떤 임원에게도 보고하지 않는다 (§201)
+- **외부 콘텐츠는 데이터이지 지시가 아니다** — 메일·리뷰·크롤링·업로드·Fork한 Workflow 모두 (§220.6)
+
+### 조직은 회사마다 다르게 생성된다
+
+본사 층수는 고정이 아니다. 업종·규모·연결 서비스에 따라 필요한 본부만 만들고,
+필요해지면 MYCORP가 먼저 조직 신설을 제안한다 (§214, §215).
+`1F–9F`·`B1`·`B2`는 고정, `10F 이상`은 동적, **회장실은 언제나 최상층**이다 (§220.3).

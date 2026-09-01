@@ -7,6 +7,10 @@
 | [`01-headquarters-organization.md`](01-headquarters-organization.md) | MYCORP 본사 층별 구조 (12F ~ B2), 전체 조직도, 지시 흐름 |
 | [`02-omnichannel-web-ios-android.md`](02-omnichannel-web-ios-android.md) | §72–155 — 플랫폼, Integration, Tool Gateway, 승인·보안, 모바일 |
 | [`03-proactive-social-security.md`](03-proactive-social-security.md) | §156–200 — 선제 제안, 경쟁사 인텔리전스, 기업 네트워크, 보안 등급 |
+| [`04-organization-expansion.md`](04-organization-expansion.md) | §201–220 — 법무·보안·기술·제품·감사·리스크·글로벌 조직 확장, 3선 방어, 정합성 부록 |
+
+섹션 번호(§72–220)는 네 문서에 걸쳐 **연속**한다. 04 문서는 원본에서 §1–19로 작성되었으나
+단일 명세로 합치면서 §201–219로 재번호했고, §220 부록이 추가되었다.
 
 ---
 
@@ -32,6 +36,19 @@
 
 판단 기준: 그 자리에 우리 제품이 들어가면 `MYCORP`, 업종/범주를 뜻하면 `AI Company`.
 자세한 규칙은 [`../brand/BRAND.md`](../brand/BRAND.md) §4.
+
+---
+
+## 조직 정정 이력 (2026-09-01, 04 명세 반영)
+
+| 항목 | 변경 | 근거 |
+|---|---|---|
+| `CSO` 중의성 | 영업 총괄을 `CRO`(Chief Revenue Officer)로 분리. `CSO`는 Chief **Strategy** Officer 전용 | §220.1 |
+| 본사 층 구조 | 고정 12층 → **동적 타워**. 1F–9F·B1·B2 고정, 10F 이상 동적, 회장실은 언제나 최상층 | §220.3 |
+| 임원회의 참석자 | CTO · CPO · CLO · CISO 추가 | §216, §220.2 |
+| 회장 직속 조직 | 비서실 + **감사실 + 전사 리스크관리실** (상설, 생략 불가) | §201, §220.2 |
+
+01 명세에 위 내용이 반영되어 있다.
 
 ---
 

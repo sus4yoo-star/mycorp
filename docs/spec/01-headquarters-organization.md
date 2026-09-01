@@ -23,6 +23,15 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 
 # 전체 본사 구조
 
+아래는 **기본 스택(Default Stack)** 이다. 소상공인 회사가 처음 설립될 때의 12층 구조다.
+
+**본사 층수는 회사마다 다르다.** 부서가 신설되면 층이 삽입되고 타워가 자란다.
+`1F ~ 9F`와 `B1 / B2`는 어떤 회사에서도 번호와 의미가 같고, `10F 이상`은 동적이다.
+**회장실은 층 번호와 무관하게 언제나 최상층(`TOP`)** 이다.
+
+전체 스택(Full Enterprise, 20층)과 층 삽입 규칙은
+[04 명세 §220.3](./04-organization-expansion.md)을 따른다.
+
 ```text
                  MYCORP HEADQUARTERS
 
@@ -34,7 +43,7 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 │      경영전략실 · 신사업실 · CEO Office          │
 ├──────────────────────────────────────────────┤
 │ 10F  EXECUTIVE BOARD FLOOR                  │
-│      CMO · COO · CFO · CSO · CDO · CHRO      │
+│      CMO · CRO · COO · CFO · CDO · CHRO      │
 ├──────────────────────────────────────────────┤
 │ 9F   MARKETING & BRAND DIVISION             │
 │      마케팅 · 브랜드 · 콘텐츠 · 광고 · CRM        │
@@ -70,6 +79,12 @@ MYCORP는 1인 창업자와 소규모 사업자가 수십 명의 AI 임직원으
 │      Memory · Database · Audit · Backup       │
 └──────────────────────────────────────────────┘
 ```
+
+기본 스택에서 법무·보안·기술·제품은 전용 층 없이 **Specialist로 호출**된다.
+해당 임원(CLO · CISO · CTO · CPO)이 임명되면 전용 층이 생성된다 (04 명세 §214, §215).
+
+감사실과 전사 리스크관리실은 **어떤 회사에서도 생략하지 않는다.**
+기본 스택에서는 12F 회장 직속으로 두고, 임원층이 늘어나면 회장실 바로 아래 전용 층으로 분리된다.
 
 ---
 
@@ -176,9 +191,13 @@ COO
 
 CSO
 
+CRO
+
 CDO
 
 등이 각자의 관점에서 의견을 제시한다.
+
+임명된 임원에 따라 CTO · CPO · CLO · CISO도 참석한다 (04 명세 §216).
 
 ---
 
@@ -274,8 +293,8 @@ MYCORP의 AI 임원들이 근무하는 층.
 
                        │
  ┌─────────┬─────────┬─────────┬─────────┬─────────┐
- │   CMO   │   CSO   │   COO   │   CFO   │   CDO   │
- │Marketing│ Sales   │Operations│Finance │ Data    │
+ │   CMO   │   CRO   │   COO   │   CFO   │   CDO   │
+ │Marketing│ Revenue │Operations│Finance │ Data    │
  └─────────┴─────────┴─────────┴─────────┴─────────┘
 
                  CHRO / CLO
@@ -290,10 +309,13 @@ Chief Marketing Officer
 
 ---
 
-## CSO
-Chief Sales Officer
+## CRO
+Chief Revenue Officer
 
 매출과 영업 총괄.
+
+> `CSO`는 Chief **Strategy** Officer(11F 경영전략실)로만 사용한다.
+> 영업 총괄은 `CRO`다. 정정 근거는 04 명세 §220.1.
 
 ---
 
@@ -502,7 +524,7 @@ Community Manager
 # 8F — SALES & GROWTH DIVISION
 ## 영업본부
 
-CSO 산하.
+CRO 산하.
 
 마케팅에서 들어온 관심 고객을 실제 매출로 연결한다.
 
@@ -1266,9 +1288,9 @@ MYCORP가 회사에 대해 기억하는 모든 정보.
              │                                     │
          Strategy                   ┌───────────────┼───────────────┐
          New Business               │               │               │
-         Intelligence              CMO             CSO             COO
+         Intelligence              CMO             CRO             COO
                                     │               │               │
-                              Marketing          Sales         Operations
+                              Marketing          Revenue       Operations
                                     │               │               │
                          ┌──────────┼───────┐       │          ┌────┼─────┐
                          │          │       │       │          │    │     │
@@ -1357,7 +1379,7 @@ MYCORP가 회사에 대해 기억하는 모든 정보.
 
 10F 임원회의
 
-CMO / CFO / CSO 의견 취합
+CMO / CFO / CRO 의견 취합
 
 ↓
 

@@ -99,7 +99,9 @@ MYCORP 안의 구성요소는 브랜드명을 접두하지 않고, 기업 조직
 |---|---|---|
 | 본사 전체 | MYCORP HQ | MYCORP 본사 |
 | 사용자의 첫 접점 | Chief of Staff | 비서실장 |
-| 임원진 | Executive Board (CMO·CSO·COO·CFO·CDO·CHRO·CLO) | 최고경영진 |
+| 임원진 | Executive Board (CEO·CSO·CMO·CRO·COO·CFO·CDO·CTO·CPO·CHRO·CLO·CISO) | 최고경영진 |
+| 회장 직속 감사 | Internal Audit Office | 감사실 |
+| 회장 직속 리스크 | Enterprise Risk Office | 전사 리스크관리실 |
 | 결재 | Executive Approval | 결재 |
 | 운영 활력 지표 | MYCORP Momentum | MYCORP 모멘텀 |
 | 공개 기업 프로필 | MYCORP Company Profile | 기업 프로필 |
@@ -212,4 +214,5 @@ MYCORP의 목소리는 **유능한 비서실장의 목소리**다.
 | 2026-09-01 | Web / iOS / Android 앱 이름을 `MYCORP` 하나로 통일 | 등급·플랫폼별 이름 분기 금지 |
 | 2026-09-01 | URL Scheme `aicompany://` → `mycorp://` | 명세 §115 반영 완료 |
 | 2026-09-01 | 사용자 호칭만 국가별 현지화하기로 결정 | `LOCALIZATION.md` |
+| 2026-09-01 | 영업 총괄 약어를 `CSO` → `CRO`로 분리 (`CSO`는 Strategy 전용) | 명세 §220.1 |
 | — | 도메인 / 상표 / 스토어 클리어런스 | **미완료 (블로커)** |
