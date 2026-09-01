@@ -19,7 +19,10 @@
     "@mycorp24/db": "workspace:*",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "@mycorp24/integrations": "workspace:*",
+    "@mycorp24/vault": "workspace:*",
+    "@mycorp24/tool-gateway": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

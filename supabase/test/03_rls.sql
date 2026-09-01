@@ -259,3 +259,40 @@ begin;
 rollback;
 
 \echo 'RLS: all checks passed'
+
+-- ---------------------------------------------------------------------------
+-- OAuth handshake state — spec §110, §111
+-- ---------------------------------------------------------------------------
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$ begin
+    insert into oauth_states (state, company_id, user_id, provider, code_verifier)
+    values ('state-founder-a', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            '11111111-1111-1111-1111-111111111111', 'GMAIL', 'verifier-a');
+    assert (select count(*) from oauth_states) = 1, 'the starter can read their own handshake';
+  end $$;
+
+  -- A colleague in the same company must not be able to finish it.
+  set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222"}';
+  do $$ begin
+    assert (select count(*) from oauth_states) = 0,
+      'TEST FAILED: another member reached someone else''s OAuth handshake';
+  end $$;
+rollback;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  begin
+    insert into oauth_states (state, company_id, user_id, provider)
+    values ('state-cross', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+            '11111111-1111-1111-1111-111111111111', 'GMAIL');
+    raise exception 'TEST FAILED: started a handshake for another company';
+  exception when insufficient_privilege then null;
+  end $$;
+rollback;
+
+\echo 'RLS(oauth): all checks passed'

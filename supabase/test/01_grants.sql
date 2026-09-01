@@ -10,7 +10,7 @@
 grant select, insert, update, delete on
   companies, memberships, founder_identities, divisions, executives, agents,
   tasks, approval_policies, approvals, proposals, risk_register,
-  integration_connections
+  integration_connections, oauth_states
 to authenticated;
 
 grant select, insert on audit_events to authenticated;

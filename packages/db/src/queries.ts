@@ -322,3 +322,143 @@ export async function upsertApprovalPolicy(
   );
   if (res.error) throw new DbError('saving the approval policy', res.error);
 }
+
+// ---------------------------------------------------------------------------
+// Integrations — spec §80, §105, §110
+// ---------------------------------------------------------------------------
+
+export const listCatalog = async (db: Db) =>
+  unwrap(
+    await db.from('integrations_catalog').select('*').order('display_name'),
+    'listing the integration catalog',
+  );
+
+export const listConnections = async (db: Db, companyId: string) =>
+  unwrap(
+    await db.from('integration_connections').select('*').eq('company_id', companyId),
+    'listing integration connections',
+  );
+
+/**
+ * Record a completed connection.
+ *
+ * The credential itself is written separately by the vault through the service
+ * role: `integration_credentials` has row level security enabled and no policy,
+ * so a user-scoped client cannot touch it (spec §110, §187).
+ */
+export async function upsertConnection(
+  db: Db,
+  input: {
+    readonly companyId: string;
+    readonly catalogId: string;
+    readonly status: string;
+    readonly connectedBy: string;
+    readonly externalAccount?: string;
+    readonly scopes?: readonly string[];
+  },
+): Promise<string> {
+  const row = unwrap(
+    await db
+      .from('integration_connections')
+      .upsert(
+        {
+          company_id: input.companyId,
+          catalog_id: input.catalogId,
+          status: input.status,
+          connected_by: input.connectedBy,
+          connected_at: new Date().toISOString(),
+          ...(input.externalAccount ? { external_account: input.externalAccount } : {}),
+          scopes: [...(input.scopes ?? [])],
+        },
+        { onConflict: 'company_id,catalog_id' },
+      )
+      .select('id')
+      .single(),
+    'recording the connection',
+  );
+  return row.id;
+}
+
+export async function removeConnection(
+  db: Db,
+  companyId: string,
+  catalogId: string,
+): Promise<void> {
+  const res = await db
+    .from('integration_connections')
+    .delete()
+    .eq('company_id', companyId)
+    .eq('catalog_id', catalogId);
+  if (res.error) throw new DbError('removing the connection', res.error);
+}
+
+// ---------------------------------------------------------------------------
+// OAuth handshake state — spec §111
+// ---------------------------------------------------------------------------
+
+export async function createOAuthState(
+  db: Db,
+  input: {
+    readonly state: string;
+    readonly companyId: string;
+    readonly userId: string;
+    readonly provider: string;
+    readonly codeVerifier?: string;
+    readonly redirectTo?: string;
+  },
+): Promise<void> {
+  // Opportunistic cleanup; expiry is enforced on read, so this is hygiene only.
+  await db.rpc('prune_oauth_states', {});
+
+  const res = await db.from('oauth_states').insert({
+    state: input.state,
+    company_id: input.companyId,
+    user_id: input.userId,
+    provider: input.provider,
+    ...(input.codeVerifier ? { code_verifier: input.codeVerifier } : {}),
+    ...(input.redirectTo ? { redirect_to: input.redirectTo } : {}),
+  });
+  if (res.error) throw new DbError('starting the OAuth handshake', res.error);
+}
+
+export interface ConsumedState {
+  readonly companyId: string;
+  readonly provider: string;
+  readonly codeVerifier: string | null;
+  readonly redirectTo: string | null;
+}
+
+/**
+ * Consume a handshake: read it, then delete it, so a replayed callback cannot
+ * be used twice. Expiry is checked here rather than trusted to cleanup.
+ *
+ * Returns null for anything that does not belong to this user — row level
+ * security already scopes the read to them, so a mismatch is indistinguishable
+ * from a forgery and is treated as one.
+ */
+export async function consumeOAuthState(
+  db: Db,
+  state: string,
+  provider: string,
+): Promise<ConsumedState | null> {
+  const { data, error } = await db
+    .from('oauth_states')
+    .select('*')
+    .eq('state', state)
+    .maybeSingle();
+
+  if (error) throw new DbError('reading the OAuth handshake', error);
+  if (!data) return null;
+
+  await db.from('oauth_states').delete().eq('state', state);
+
+  if (data.provider !== provider) return null;
+  if (Date.parse(data.expires_at) <= Date.now()) return null;
+
+  return {
+    companyId: data.company_id,
+    provider: data.provider,
+    codeVerifier: data.code_verifier,
+    redirectTo: data.redirect_to,
+  };
+}

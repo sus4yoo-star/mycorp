@@ -8,6 +8,9 @@ const config: NextConfig = {
     '@mycorp24/business-logic',
     '@mycorp24/chat',
     '@mycorp24/db',
+    '@mycorp24/integrations',
+    '@mycorp24/vault',
+    '@mycorp24/tool-gateway',
   ],
 };
 

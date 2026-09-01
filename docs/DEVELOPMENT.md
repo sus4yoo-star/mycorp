@@ -39,6 +39,7 @@ packages/
   ai-gateway/         AI Provider Abstraction (Claude 기본)
   chat/               비서실장 Intent 분류 · Action Router · UI↔Chat parity
   db/                 Supabase 타입 · 데이터 접근 계층
+  vault/              자격증명 암호화 (AES-256-GCM)
   auth/               멤버십 · need-to-know
   api-client/         웹·모바일 공용 API 클라이언트
 supabase/migrations/  멀티테넌트 스키마 + RLS
@@ -151,9 +152,20 @@ RDAP으로 도메인 등록 여부만 확인한다. 상표(특히 `24`의 식별
 Netlify (`netlify.toml`). 루트에서 빌드하고 `apps/web`을 배포한다.
 `/hq`는 `searchParams`를 읽으므로 서버 렌더링 라우트다.
 
+### 토큰을 로그에 남기지 않는다
+
+OAuth 토큰은 암호화되어 저장되고, 오류 경로에도 토큰이 들어가지 않도록 설계되어 있다.
+`console.log(tokens)` 한 줄이 §110을 무너뜨린다.
+
+### 요청 범위를 부풀리지 않는다
+
+Gmail은 `gmail.readonly`만 요청한다. 어댑터는 `SEND_MAIL`을 **미지원으로 선언**하고
+그 이유를 문자열로 갖는다. 비서실장이 "초안까지 준비했습니다"라고 정직하게 말할 수
+있는 것은 어댑터가 없는 권한을 주장하지 않기 때문이다.
+
 ## 아직 없는 것
 
-실제 Integration Adapter 구현, Push, Company Memory, 경쟁사 Watchlist,
+Instagram Adapter, 토큰 자동 갱신, Push, Company Memory, 경쟁사 Watchlist,
 공개 기업 프로필, 소셜·생체 인증.
 
 **비어 있는 골격을 미리 만들지 않았다.** 동작하지 않는 껍데기는 그것이 존재한다고

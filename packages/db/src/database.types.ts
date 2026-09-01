@@ -87,6 +87,54 @@ export type ApprovalPolicyRow = {
   updated_at: string;
 };
 
+export type IntegrationCatalogRow = {
+  id: string;
+  provider: string;
+  category: string;
+  display_name: string;
+  auth_type: string;
+  capabilities: string[];
+  approval_required: boolean;
+  webhook_supported: boolean;
+  mobile_supported: boolean;
+  status: string;
+  notes: string | null;
+};
+
+export type IntegrationConnectionRow = {
+  id: string;
+  company_id: string;
+  catalog_id: string;
+  status: string;
+  connected_by: string | null;
+  connected_at: string;
+  last_health_at: string | null;
+  external_account: string | null;
+  scopes: string[];
+};
+
+export type IntegrationCredentialRow = {
+  connection_id: string;
+  company_id: string;
+  /** PostgREST renders bytea as a `\x…` hex string in both directions. */
+  ciphertext: string;
+  nonce: string;
+  key_version: number;
+  expires_at: string | null;
+  rotated_at: string;
+};
+
+export type OAuthStateRow = {
+  state: string;
+  company_id: string;
+  user_id: string;
+  provider: string;
+  code_verifier: string | null;
+  redirect_to: string | null;
+  created_at: string;
+  expires_at: string;
+};
+
 export type AuditEventRow = {
   id: number;
   company_id: string;
@@ -131,6 +179,22 @@ export type Database = {
         ApprovalPolicyRow,
         Pick<ApprovalPolicyRow, 'company_id' | 'action' | 'mode'> & Partial<ApprovalPolicyRow>
       >;
+      integrations_catalog: Table<IntegrationCatalogRow>;
+      integration_connections: Table<
+        IntegrationConnectionRow,
+        Pick<IntegrationConnectionRow, 'company_id' | 'catalog_id'> &
+          Partial<IntegrationConnectionRow>
+      >;
+      integration_credentials: Table<
+        IntegrationCredentialRow,
+        Pick<IntegrationCredentialRow, 'connection_id' | 'company_id' | 'ciphertext' | 'nonce'> &
+          Partial<IntegrationCredentialRow>
+      >;
+      oauth_states: Table<
+        OAuthStateRow,
+        Pick<OAuthStateRow, 'state' | 'company_id' | 'user_id' | 'provider'> &
+          Partial<OAuthStateRow>
+      >;
       audit_events: Table<
         AuditEventRow,
         Pick<AuditEventRow, 'company_id' | 'actor' | 'action' | 'outcome'> & Partial<AuditEventRow>
@@ -143,6 +207,7 @@ export type Database = {
     Functions: {
       is_company_member: { Args: { target: string }; Returns: boolean };
       is_company_founder: { Args: { target: string }; Returns: boolean };
+      prune_oauth_states: { Args: Record<string, never>; Returns: undefined };
       found_company: {
         Args: {
           p_name: string;

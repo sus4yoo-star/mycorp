@@ -22,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">홈</Link>
               <Link href="/chat">비서실</Link>
               <Link href="/approvals">결재실</Link>
+              <Link href="/connect">연결</Link>
               <Link href="/hq">본사</Link>
             </nav>
           </div>

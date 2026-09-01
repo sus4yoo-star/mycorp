@@ -52,6 +52,7 @@ AI prepares.  Founder approves.  Company executes.
 
 | 문서 | 내용 |
 |---|---|
+| [`docs/SETUP.md`](docs/SETUP.md) | **설치 가이드** — Supabase · 환경변수 · OAuth · 배포 |
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | 모노레포 구조, 실행 방법, 지켜야 하는 제약 |
 | [`supabase/README.md`](supabase/README.md) | 멀티테넌트 스키마와 RLS 규칙 |
 
@@ -95,7 +96,7 @@ pnpm test:db      # RLS 정책 테스트 (임시 Postgres)
 pnpm clearance    # 도메인 클리어런스 RDAP 조회
 ```
 
-자세한 내용은 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+처음 세팅하신다면 [`docs/SETUP.md`](docs/SETUP.md)부터 보십시오.
 
 ## 현재 상태
 
