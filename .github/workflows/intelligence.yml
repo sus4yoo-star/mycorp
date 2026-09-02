@@ -38,4 +38,19 @@ jobs:
           echo "HTTP $code"
           # The body carries per-company results, including errors. Never a token.
           cat /tmp/out.json
+          echo
+
+          # Two different 401s reach here and they need different fixes. When the
+          # project is not publicly visible, Netlify answers for the site before
+          # the app ever sees the request, and its login page looks nothing like
+          # our JSON. Say which wall we hit instead of leaving "401" to be guessed.
+          if [ "$code" = "401" ] && grep -q 'edge-access' /tmp/out.json; then
+            echo "::error::Netlify refused this before the app saw it: the project is not publicly visible."
+            echo "Fix: Netlify -> mycorp24 -> Project configuration -> General -> Project visibility"
+            echo "     -> Edit visibility -> set Production to Public."
+            echo "The app's own login still guards every page. This setting only decides"
+            echo "whether a request is allowed to reach it at all."
+            exit 1
+          fi
+
           [ "$code" = "200" ] || { echo "::error::collection returned $code"; exit 1; }
