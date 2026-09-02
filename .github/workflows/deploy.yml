@@ -12,15 +12,6 @@ on:
         description: 'Skip supabase db push'
         type: boolean
         default: false
-      repair_versions:
-        description: >-
-          Space-separated migration versions to mark as already applied before
-          pushing (e.g. "0001 0002 0003"). For a database whose schema was
-          created by hand in the SQL Editor, so Postgres has the objects but
-          Supabase has no migration history. Marking records history only — it
-          runs no SQL — so verify.sql afterwards is what proves the claim true.
-        type: string
-        default: ''
 
 concurrency:
   group: deploy-production
@@ -73,25 +64,21 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
-          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
-          for v in ${{ inputs.repair_versions }}; do
-            echo "::notice::marking migration $v as already applied"
-            supabase migration repair --status applied "$v"
-          done
+          supabase link --project-ref "$SUPABASE_PROJECT_ID"
+          scripts/supabase-reconcile.sh
           supabase db push
 
       # Migrations can succeed while leaving the database unsafe — a table
       # created without RLS, a policy accidentally added to the credential
-      # table. Assert the invariants against the real project.
+      # table, a migration recorded as applied that never ran. Assert the
+      # invariants against the real project.
       - name: verify the deployed schema
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          supabase db execute --file supabase/verify.sql \
-            || psql "$(supabase status -o env 2>/dev/null | grep -m1 DB_URL | cut -d= -f2- | tr -d '\"')" \
-                 -v ON_ERROR_STOP=1 -f supabase/verify.sql
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: scripts/supabase-query.sh < supabase/verify.sql
 
   deploy:
     name: netlify
