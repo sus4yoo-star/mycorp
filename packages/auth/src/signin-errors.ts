@@ -62,6 +62,34 @@ export function explainSignInError(raw: unknown): SignInFailure {
     return { message: '지금은 신규 가입이 닫혀 있습니다.', retryable: false };
   }
 
+  // Deliberately says neither which half was wrong nor whether the address is
+  // registered: that answer would let anyone enumerate who has an account.
+  if (hay.includes('invalid login credentials') || hay.includes('invalid credentials')) {
+    return { message: '이메일 또는 비밀번호가 맞지 않습니다.', retryable: true };
+  }
+
+  if (hay.includes('already registered') || hay.includes('user already exists')) {
+    return {
+      message: '이미 가입된 이메일입니다. 로그인해 주십시오.',
+      retryable: false,
+    };
+  }
+
+  if (hay.includes('weak password') || hay.includes('password should be')) {
+    return { message: '비밀번호가 너무 짧습니다. 8자 이상으로 정해 주십시오.', retryable: true };
+  }
+
+  // Confirmation mail goes through the same sender that is not set up yet, so
+  // telling the founder to check their inbox would send them somewhere empty.
+  if (hay.includes('email not confirmed') || hay.includes('not confirmed')) {
+    return {
+      message:
+        '메일 확인이 끝나지 않은 계정입니다. 확인 메일이 오지 않는다면 ' +
+        '메일 발송 설정(SMTP)이 아직 되어 있지 않은 것입니다.',
+      retryable: false,
+    };
+  }
+
   if (hay.includes('invalid email') || hay.includes('unable to validate email')) {
     return { message: '이메일 주소를 다시 확인해 주십시오.', retryable: true };
   }

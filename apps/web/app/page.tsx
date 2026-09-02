@@ -17,7 +17,7 @@ export default function Home() {
           MYCORP24는 마케팅, 영업, 재무, 운영, 전략 등 회사에 필요한 AI 조직이
           365일 24시간 움직이는 <strong>당신의 AI 회사</strong>입니다.
         </p>
-        <Link className="cta" href="/hq">
+        <Link className="cta" href="/signup">
           내 AI 회사 만들기
         </Link>
       </section>

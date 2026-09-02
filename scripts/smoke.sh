@@ -22,6 +22,7 @@ base="${APP_URL%/}"
 paths=(
   /
   /login
+  /signup
   /onboarding
   /hq
   /briefing
