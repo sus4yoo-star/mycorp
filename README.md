@@ -125,7 +125,7 @@ pnpm clearance    # 도메인 클리어런스 RDAP 조회
 | Web | Next.js |
 | Mobile | React Native + Expo |
 | Backend / DB / Auth | Supabase (Multi-Tenant) |
-| Deployment | Netlify (`netlify.toml`) |
+| Deployment | Netlify (`apps/web/netlify.toml`) |
 | AI | Claude 우선. **AI Provider Abstraction**(`packages/ai-gateway`)을 두어 교체·병행 가능하게 설계 |
 | Monorepo | pnpm workspaces + Turborepo |
 

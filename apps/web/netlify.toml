@@ -1,0 +1,33 @@
+# MYCORP24 — Netlify deployment (spec §73.1)
+#
+# This lives in apps/web, not the repo root, because the repo is a pnpm
+# workspace. Netlify's CLI refuses to deploy a monorepo it cannot disambiguate:
+#
+#   Error: Projects detected: @mycorp24/mobile, @mycorp24/web, …
+#
+# The deploy names the package (`--filter @mycorp24/web`), which makes this
+# directory the build base — so every path below is relative to apps/web, and
+# the plugin and headers must be declared here rather than at the root, where
+# nothing would read them.
+
+[build]
+  command = "pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Corepack lets Netlify use the pnpm version pinned in package.json.
+  NETLIFY_USE_PNPM = "true"
+
+# /hq and the API routes are server-rendered; without this the deploy would
+# succeed and the dynamic routes would 404.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

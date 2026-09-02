@@ -181,7 +181,9 @@ RDAP으로 도메인 등록 여부만 확인한다. 상표(특히 `24`의 식별
 
 ## 배포
 
-Netlify (`netlify.toml`). 루트에서 빌드하고 `apps/web`을 배포한다.
+Netlify (`apps/web/netlify.toml`). 모노레포이므로 배포는 패키지를 지목한다 —
+`netlify deploy --build --prod --filter @mycorp24/web`. 그래서 설정 파일이
+루트가 아니라 `apps/web`에 있고, 안의 경로는 전부 그 디렉터리 기준이다.
 `/hq`는 `searchParams`를 읽으므로 서버 렌더링 라우트다.
 
 ### 토큰을 로그에 남기지 않는다
