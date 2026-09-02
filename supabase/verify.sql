@@ -12,6 +12,34 @@ declare
   missing text;
   n int;
 begin
+  -- 0. Every table the migrations create must actually be here.
+  --
+  --    `migration repair --status applied` writes history without running SQL,
+  --    so a wrong repair leaves the database quietly missing objects while the
+  --    deploy reports success. This check is what makes that claim falsifiable:
+  --    the name of the missing table names the migration that never ran.
+  select string_agg(t, ', ' order by t) into missing
+    from unnest(array[
+      -- 0001_init
+      'agents', 'approval_policies', 'approvals', 'audit_events', 'companies',
+      'divisions', 'executives', 'founder_identities',
+      'integration_connections', 'integration_credentials',
+      'integrations_catalog', 'memberships', 'proposals', 'risk_register',
+      'tasks',
+      -- 0003_oauth_states
+      'oauth_states',
+      -- 0004_memory_and_proposals
+      'company_constitution', 'company_memory', 'competitor_signals',
+      'competitors', 'founder_tasks',
+      -- 0005_competitor_snapshots
+      'competitor_snapshots', 'intelligence_runs'
+    ]) as t
+   where to_regclass('public.' || t) is null;
+
+  if missing is not null then
+    raise exception 'missing table(s): % — a migration did not run', missing;
+  end if;
+
   -- 1. Every table in `public` must have row level security enabled.
   select string_agg(tablename, ', ' order by tablename) into missing
     from pg_tables

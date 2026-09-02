@@ -12,6 +12,15 @@ on:
         description: 'Skip supabase db push'
         type: boolean
         default: false
+      repair_versions:
+        description: >-
+          Space-separated migration versions to mark as already applied before
+          pushing (e.g. "0001 0002 0003"). For a database whose schema was
+          created by hand in the SQL Editor, so Postgres has the objects but
+          Supabase has no migration history. Marking records history only — it
+          runs no SQL — so verify.sql afterwards is what proves the claim true.
+        type: string
+        default: ''
 
 concurrency:
   group: deploy-production
@@ -66,6 +75,10 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+          for v in ${{ inputs.repair_versions }}; do
+            echo "::notice::marking migration $v as already applied"
+            supabase migration repair --status applied "$v"
+          done
           supabase db push
 
       # Migrations can succeed while leaving the database unsafe — a table
