@@ -24,7 +24,8 @@
     "@mycorp24/vault": "workspace:*",
     "@mycorp24/tool-gateway": "workspace:*",
     "@mycorp24/intelligence": "workspace:*",
-    "@mycorp24/ai-gateway": "workspace:*"
+    "@mycorp24/ai-gateway": "workspace:*",
+    "@mycorp24/auth": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

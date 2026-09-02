@@ -87,6 +87,37 @@ btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
 
 ---
 
+### 로그인 메일 — 이걸 안 하면 회장님 외에는 아무도 가입할 수 없습니다
+
+Supabase 프로젝트를 새로 만들면 인증 메일이 **Supabase 기본 발송기**로 나갑니다.
+제약이 두 가지인데, 둘 다 조용히 걸립니다:
+
+- **시간당 2통.** 사용자당이 아니라 프로젝트 전체 합계입니다.
+- **프로젝트 팀에 등록된 주소로만 발송.** 그 외 주소는 한도와 무관하게 거부됩니다.
+
+즉 기본 상태에서는 **프로젝트 소유자 본인만 로그인할 수 있습니다.** 손님을 한 명이라도
+받으려면 SMTP를 직접 연결해야 합니다. Supabase 문서도 기본 발송기는 프로덕션용이
+아니라고 명시합니다.
+
+**Authentication → Emails → SMTP Settings** 에서 발송 서비스(Resend·SendGrid·Postmark·
+AWS SES 등)를 연결하십시오. 연결하면 기본 한도가 시간당 30통이 되고,
+**Authentication → Rate Limits** 에서 올릴 수 있습니다.
+
+### 로그인 링크가 localhost로 갑니다
+
+`Authentication → URL Configuration`:
+
+| 항목 | 값 |
+|---|---|
+| Site URL | `https://mycorp24.netlify.app` |
+| Redirect URLs | `https://mycorp24.netlify.app/**` (로컬 개발도 하면 `http://localhost:3000/**` 추가) |
+
+앱은 `emailRedirectTo`로 올바른 주소를 요청합니다. 하지만 그 주소가 **Redirect URLs
+목록에 없으면 Supabase가 조용히 Site URL로 대체**하고, 초기값이 `http://localhost:3000`
+입니다. 그래서 메일 링크가 로컬 주소로 갑니다 — 코드를 아무리 봐도 원인이 안 보입니다.
+
+이미 발송된 메일의 링크는 못 고칩니다. 설정을 바꾼 뒤 새로 요청하십시오.
+
 ### 경쟁사 자동 관찰
 
 매일 아침 경쟁사를 확인하고 제안을 준비하는 워크플로가 있습니다

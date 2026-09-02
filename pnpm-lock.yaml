@@ -54,6 +54,9 @@ importers:
       '@mycorp24/ai-gateway':
         specifier: workspace:*
         version: link:../../packages/ai-gateway
+      '@mycorp24/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@mycorp24/business-logic':
         specifier: workspace:*
         version: link:../../packages/business-logic

@@ -58,3 +58,5 @@ export function isElevated(s: Session, now: Date = new Date()): boolean {
   const until = Date.parse(s.elevatedUntil);
   return Number.isFinite(until) && until > now.getTime();
 }
+
+export { explainSignInError, type SignInFailure } from "./signin-errors";

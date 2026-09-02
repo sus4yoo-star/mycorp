@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { explainSignInError } from '@mycorp24/auth';
 import { getBrowserClient } from '../../lib/supabase/client';
 
 /**
@@ -28,7 +29,7 @@ export default function LoginForm() {
       setState('sent');
     } catch (err) {
       setState('error');
-      setMessage(err instanceof Error ? err.message : '로그인 링크를 보내지 못했습니다.');
+      setMessage(explainSignInError(err).message);
     }
   }
 
