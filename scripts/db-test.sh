@@ -91,6 +91,11 @@ echo "▸ applying migrations"
   -f "$ROOT/supabase/test/01_grants.sql" \
   -f "$ROOT/supabase/test/02_seed.sql" >/dev/null
 
+# verify.sql is what the deploy runs against the real project. If it only ever
+# runs there, a mistake in it is discovered in production. Run it here too.
+echo "▸ verifying the schema (supabase/verify.sql)"
+"${PSQL[@]}" -q -d "$DB" -f "$ROOT/supabase/verify.sql" >/dev/null
+
 echo "▸ running row level security tests"
 "${PSQL[@]}" -d "$DB" -f "$ROOT/supabase/test/03_rls.sql"
 "${PSQL[@]}" -d "$DB" -f "$ROOT/supabase/test/04_flow.sql"
