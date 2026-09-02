@@ -28,7 +28,7 @@ git push  →  GitHub Actions
 | `NEXT_PUBLIC_SUPABASE_URL` | Settings → API | 공개 값 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API | 공개 값 (브라우저로 나감) |
 | `NETLIFY_AUTH_TOKEN` | app.netlify.com → User settings → Applications → New access token | 비밀 |
-| `NETLIFY_SITE_ID` | 사이트 → Site configuration → General → Site ID | 공개 값 |
+| `NETLIFY_SITE_ID` | 사이트 → Project configuration → General → **Project ID** | 공개 값. Netlify가 UI 용어를 Site → Project로 바꿔서 이름이 `Project ID`로 보이지만, 같은 화면에 "Also known as Site ID"라고 적혀 있는 그 값이 맞습니다 |
 
 시크릿이 없으면 워크플로는 **실패하지 않고 건너뜁니다.** 절반만 설정해도 됩니다 —
 Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
@@ -36,13 +36,14 @@ Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
 ### Netlify 사이트가 아직 없다면
 
 `netlify.toml`이 이미 저장소에 있으므로, Netlify에서 이 저장소를 한 번만 연결하면
-사이트가 생깁니다. 그 뒤 Site ID를 위 시크릿에 넣으십시오.
+사이트가 생깁니다. 그 뒤 Project configuration → General의 **Project ID**(= Site ID)를
+위 시크릿에 넣으십시오.
 
 ### Netlify 런타임 환경변수
 
 빌드에 필요한 공개 값은 GitHub 시크릿에서 주입되지만,
 **서버에서만 쓰는 비밀은 Netlify 쪽에 직접** 넣어야 합니다
-(Site configuration → Environment variables):
+(Project configuration → Environment variables):
 
 | 변수 | 성격 |
 |---|---|
