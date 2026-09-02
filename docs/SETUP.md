@@ -54,10 +54,31 @@ Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
 | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` | 연동을 쓸 때만 |
 | `META_OAUTH_CLIENT_ID` / `_SECRET` | 연동을 쓸 때만 |
 
+`SUPABASE_SERVICE_ROLE_KEY`와 `ANTHROPIC_API_KEY`는 각 서비스에서 발급받는 값이지만,
+`MYCORP24_CREDENTIAL_KEY`와 `MYCORP24_CRON_SECRET`은 **받아오는 곳이 없습니다.**
+직접 만드는 값입니다.
+
+`MYCORP24_CREDENTIAL_KEY`는 형식이 정해져 있습니다 — **32바이트를 base64로 인코딩한
+문자열**이어야 하고, 아니면 앱이 시작하면서 거부합니다. 비밀번호 관리자가 만들어주는
+일반 비밀번호는 이 조건을 만족하지 않습니다.
+
+터미널이 있다면:
+
 ```bash
-# MYCORP24_CREDENTIAL_KEY 생성 (32바이트 base64)
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
+
+없다면 브라우저에서. `F12` → Console 탭에 붙여넣고 Enter, 따옴표 안의 44글자를 복사:
+
+```js
+btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+```
+
+둘 다 만드는 기계 안에서 끝나고 아무 데도 전송되지 않습니다.
+
+`MYCORP24_CRON_SECRET`은 형식 제한이 없습니다. 같은 방법으로 만들거나 비밀번호
+관리자로 40자 이상 뽑으면 됩니다. 다만 **Netlify와 GitHub 양쪽에 같은 값**이어야
+합니다 — 받는 쪽과 보내는 쪽이 나눠 갖는 값이라, 다르면 매일 아침 요청이 거부됩니다.
 
 > **이 비밀들은 채팅·이슈·커밋 어디에도 붙여넣지 마십시오.**
 > service role 키는 모든 테넌트의 모든 데이터를 읽습니다.
@@ -75,12 +96,8 @@ GitHub 시크릿 2개를 추가하면 켜집니다:
 
 | 시크릿 | 값 |
 |---|---|
-| `MYCORP24_APP_URL` | 배포된 주소 (예: `https://mycorp24.netlify.app`) |
-| `MYCORP24_CRON_SECRET` | 아래로 생성 · **Netlify 환경변수에도 같은 값**을 넣습니다 |
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-```
+| `MYCORP24_APP_URL` | 배포된 주소 — `https://mycorp24.netlify.app`. 비밀이 아니라 스케줄러가 어디로 요청할지 알려주는 값입니다 |
+| `MYCORP24_CRON_SECRET` | 위 절에서 만든 값 · **Netlify 환경변수에 넣은 것과 같은 값이어야 합니다** |
 
 없으면 워크플로는 실패하지 않고 건너뜁니다.
 
