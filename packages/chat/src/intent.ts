@@ -47,6 +47,12 @@ export interface Classification {
   readonly entities: Entities;
   /** 1 for a deterministic rule match, lower when a model had to guess. */
   readonly confidence: number;
+  /**
+   * Whether the founder was giving an order or asking about one. Read from the
+   * utterance separately (see `mood.ts`), because the same verb carries both:
+   * acting on a question takes the decision away from the founder.
+   */
+  readonly mood?: import('./mood').Mood;
 }
 
 /**

@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { FounderIdentity } from '@mycorp24/types';
-import { route as routeUtterance, type RouterContext } from '@mycorp24/chat';
+import {
+  buildBrief,
+  route as routeUtterance,
+  systemPrompt,
+  userPrompt,
+  type RouterContext,
+  type RouterResult,
+} from '@mycorp24/chat';
+import { createAiProvider } from '@mycorp24/ai-gateway';
 import { getCurrentCompany, listPendingApprovals } from '@mycorp24/db';
 import { getServerClient, getSessionUser } from '../../../lib/supabase/server';
 import { isSupabaseConfigured } from '../../../lib/supabase/config';
@@ -82,6 +90,41 @@ export async function POST(request: Request) {
   }
 
   const live = await liveContext();
-  const result = routeUtterance(message, live ?? demoContext());
-  return NextResponse.json({ ...result, live: live !== null });
+  const ctx = live ?? demoContext();
+  const result = routeUtterance(message, ctx);
+  const reply = await speak(message, result, ctx);
+
+  return NextResponse.json({ ...result, reply, live: live !== null });
+}
+
+/**
+ * Put the router's decision into the chief of staff's own words.
+ *
+ * The decision is already made and is not sent back for revision: `nextStep`
+ * and the cards come from the router, and only the sentences change here. So
+ * the model cannot talk the product into an action, and a model outage costs
+ * the founder some fluency rather than the use of their company.
+ */
+async function speak(
+  utterance: string,
+  result: RouterResult,
+  ctx: RouterContext,
+): Promise<string> {
+  if (!process.env['ANTHROPIC_API_KEY']) return result.reply;
+
+  try {
+    const brief = buildBrief(utterance, result, ctx);
+    const answer = await createAiProvider().complete({
+      system: systemPrompt(brief),
+      messages: [{ role: 'user', content: userPrompt(brief) }],
+      tier: 'ROUTINE',
+      maxTokens: 400,
+    });
+    const text = answer.text.trim();
+    // A refusal or an empty answer is not a reply. Fall back rather than show
+    // the founder a blank turn.
+    return answer.refusal || text.length === 0 ? result.reply : text;
+  } catch {
+    return result.reply;
+  }
 }

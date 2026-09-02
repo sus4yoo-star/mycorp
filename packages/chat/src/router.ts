@@ -1,6 +1,7 @@
 import type { FounderIdentity } from '@mycorp24/types';
 import { formatAddress } from '@mycorp24/business-logic';
 import { extractEntities } from './entities';
+import { readMood } from './mood';
 import type { Classification, Entities, Intent, IntentClassifier } from './intent';
 
 /**
@@ -90,14 +91,15 @@ const RULES: readonly Rule[] = [
 
 const classifyDeterministic = (text: string): Classification => {
   const entities = extractEntities(text);
+  const mood = readMood(text);
   for (const rule of RULES) {
-    if (rule.re.test(text)) return { intent: rule.intent, entities, confidence: 1 };
+    if (rule.re.test(text)) return { intent: rule.intent, entities, confidence: 1, mood };
   }
   // A bare metric mention with no question word still reads as a metric ask.
   if (entities.metric && /\?|알려|보여|줘/.test(text)) {
-    return { intent: 'SHOW_METRIC', entities, confidence: 0.8 };
+    return { intent: 'SHOW_METRIC', entities, confidence: 0.8, mood };
   }
-  return { intent: 'UNKNOWN', entities, confidence: 0 };
+  return { intent: 'UNKNOWN', entities, confidence: 0, mood };
 };
 
 // ---------------------------------------------------------------------------
@@ -153,6 +155,104 @@ export function route(utterance: string, ctx: RouterContext): RouterResult {
  * exactly the same reply logic — there is one implementation of what the chief
  * of staff says, not two that can drift apart.
  */
+// ---------------------------------------------------------------------------
+// Questions about actions
+// ---------------------------------------------------------------------------
+
+/** Intents that would start something. Only these care about mood. */
+const ACTION_INTENTS: ReadonlySet<Intent> = new Set<Intent>([
+  'CONNECT_INTEGRATION',
+  'DECIDE_APPROVAL',
+  'UPDATE_APPROVAL_POLICY',
+  'UPDATE_PREFERENCE',
+  'CREATE_AUTOMATION',
+  'DELEGATE',
+]);
+
+interface Explanation {
+  readonly reply: string;
+  readonly nextStep: NextStep;
+  readonly cards?: readonly GenerativeCard[];
+}
+
+/**
+ * Answer the question, then offer the move — never leave the founder holding
+ * information with nothing to do (§156). Returns null when there is nothing
+ * useful to say, and the normal branch handles it.
+ */
+function explain(
+  classification: Classification,
+  ctx: RouterContext,
+  addr: string,
+): Explanation | null {
+  const e = classification.entities;
+
+  switch (classification.intent) {
+    case 'CONNECT_INTEGRATION': {
+      const name = e.provider ? providerName(e.provider) : '해당 서비스';
+      if (e.provider && ctx.connectedProviders.has(e.provider)) {
+        return {
+          reply: `${addr}, ${name}는 이미 연결되어 있습니다. 다시 연결하실 필요는 없습니다.`,
+          nextStep: { kind: 'NAVIGATE', route: '/connect' },
+          cards: [{ kind: 'CONNECT', provider: e.provider, connected: true }],
+        };
+      }
+      return {
+        reply:
+          `${addr}, 연결은 '연결' 화면에서 ${name} 계정으로 로그인하시면 끝납니다. ` +
+          `저희가 비밀번호를 보관하지는 않고, ${name}가 발급한 접근 권한만 암호화해서 보관합니다. ` +
+          `지금 연결하시겠으면 "${e.provider ? `${name} 연결해` : '연결해'}"라고 지시해 주십시오.`,
+        nextStep: { kind: 'NAVIGATE', route: '/connect' },
+        ...(e.provider
+          ? { cards: [{ kind: 'CONNECT' as const, provider: e.provider, connected: false }] }
+          : {}),
+      };
+    }
+
+    case 'DECIDE_APPROVAL': {
+      const n = ctx.pendingApprovals.length;
+      return {
+        reply:
+          n === 0
+            ? `${addr}, 지금 결재 대기 중인 안건은 없습니다.`
+            : `${addr}, 결재는 회장님만 하실 수 있습니다. 지금 ${n}건이 기다리고 있고, ` +
+              `승인하시려면 "승인해", 반려하시려면 "반려해"라고 지시해 주십시오.`,
+        nextStep: n === 0 ? { kind: 'NONE' } : { kind: 'NAVIGATE', route: '/approvals' },
+        ...(n > 0
+          ? { cards: [{ kind: 'APPROVAL_LIST' as const, approvals: ctx.pendingApprovals }] }
+          : {}),
+      };
+    }
+
+    case 'UPDATE_APPROVAL_POLICY':
+      return {
+        reply:
+          `${addr}, 금액 기준을 정해두시면 그 이상은 저희가 먼저 회장님께 여쭙고, ` +
+          `그 아래는 알아서 처리합니다. "광고비 30만원 넘으면 물어봐"처럼 말씀하시면 됩니다.`,
+        nextStep: { kind: 'NAVIGATE', route: '/approvals' },
+      };
+
+    case 'CREATE_AUTOMATION':
+      return {
+        reply:
+          `${addr}, 반복 업무는 주기와 할 일을 함께 말씀해 주시면 등록됩니다. ` +
+          `"매주 월요일 아침에 리뷰 정리해"처럼요.`,
+        nextStep: { kind: 'NONE' },
+      };
+
+    case 'DELEGATE':
+      return {
+        reply:
+          `${addr}, 위임은 "알아서 처리하고 중요한 것만 보고해"라고 지시하시면 됩니다. ` +
+          `그래도 결재가 필요한 일은 반드시 회장님께 올립니다.`,
+        nextStep: { kind: 'NONE' },
+      };
+
+    default:
+      return null;
+  }
+}
+
 export function respond(
   classification: Classification,
   ctx: RouterContext,
@@ -166,6 +266,15 @@ export function respond(
     nextStep: NextStep = { kind: 'NONE' },
     cards: readonly GenerativeCard[] = [],
   ): RouterResult => ({ classification, reply, cards, nextStep });
+
+  // A question about an action is not the action. "인스타 연결해" is an order;
+  // "인스타 연결해야하는데 어떻게하면 되지?" is a founder asking how, and
+  // starting the connection there would answer a question by taking a decision
+  // away from them — and then report work that has not happened.
+  if (classification.mood === 'QUESTION' && ACTION_INTENTS.has(classification.intent)) {
+    const answer = explain(classification, ctx, addr);
+    if (answer) return done(answer.reply, answer.nextStep, answer.cards ?? []);
+  }
 
   switch (classification.intent) {
     case 'CONNECT_INTEGRATION': {
