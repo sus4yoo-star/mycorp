@@ -20,10 +20,17 @@ import { isSupabaseConfigured } from '../../../lib/supabase/config';
  * would happen next, and anything touching the outside world is handed to the
  * tool gateway, where permission, risk and approval policy are enforced.
  *
- * With a signed-in founder the context is their real company, filtered by row
- * level security. Without Supabase configured it falls back to an obviously
- * labelled demo so the chat is explorable — but the reply is still honest about
- * what is and is not connected (§151).
+ * Two things this endpoint must not do, both of which it used to:
+ *
+ *   - Answer a stranger. It calls a paid model, so an open endpoint is a way to
+ *     spend the founder's money from the outside. A signed-in founder is
+ *     required whenever there is an auth system to sign in to.
+ *   - Show invented data as if it were the company's. The demo context carries
+ *     made-up approvals and a staffed floor; a founder who has signed up but
+ *     not yet founded a company would have been shown those as their own. It is
+ *     now reachable only when Supabase is not configured at all — a local
+ *     exploration of the interface, where there is no company to misrepresent —
+ *     and the model is not called there (§151).
  */
 
 const DEMO_FOUNDER: FounderIdentity = {
@@ -43,15 +50,10 @@ const demoContext = (): RouterContext => ({
   workingAgentCount: 31,
 });
 
-async function liveContext(): Promise<RouterContext | null> {
-  if (!isSupabaseConfigured()) return null;
-  const user = await getSessionUser();
-  if (!user) return null;
+type Db = Awaited<ReturnType<typeof getServerClient>>;
+type Current = NonNullable<Awaited<ReturnType<typeof getCurrentCompany>>>;
 
-  const db = await getServerClient();
-  const current = await getCurrentCompany(db, user.id);
-  if (!current) return null;
-
+async function liveContext(db: Db, current: Current): Promise<RouterContext> {
   const pending = await listPendingApprovals(db, current.companyId);
 
   return {
@@ -89,12 +91,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'message is too long' }, { status: 413 });
   }
 
-  const live = await liveContext();
-  const ctx = live ?? demoContext();
+  // No Supabase means no accounts and nothing real to protect: the demo exists
+  // so the interface can be looked at. It never reaches the model.
+  if (!isSupabaseConfigured()) {
+    const ctx = demoContext();
+    return NextResponse.json({ ...routeUtterance(message, ctx), live: false });
+  }
+
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: 'authentication required' }, { status: 401 });
+  }
+
+  const db = await getServerClient();
+  const current = await getCurrentCompany(db, user.id);
+  if (!current) {
+    // Answering with the demo here would hand a founder someone else's
+    // invented approvals and call them their own.
+    return NextResponse.json(
+      {
+        classification: { intent: 'UNKNOWN', entities: {}, confidence: 1 },
+        reply: '아직 회사가 없습니다. 회사를 먼저 만들어 주십시오.',
+        cards: [],
+        nextStep: { kind: 'NAVIGATE', route: '/onboarding' },
+        live: true,
+      },
+      { status: 200 },
+    );
+  }
+
+  const ctx = await liveContext(db, current);
   const result = routeUtterance(message, ctx);
   const reply = await speak(message, result, ctx);
 
-  return NextResponse.json({ ...result, reply, live: live !== null });
+  return NextResponse.json({ ...result, reply, live: true });
 }
 
 /**
@@ -118,12 +148,18 @@ async function speak(
       system: systemPrompt(brief),
       messages: [{ role: 'user', content: userPrompt(brief) }],
       tier: 'ROUTINE',
-      maxTokens: 400,
+      // No maxTokens here on purpose. Thinking is on by default and is spent
+      // from the same budget, so a ceiling sized for a three-sentence answer
+      // can be consumed before a single word is written — and the reply comes
+      // back with no text at all. Brevity is the prompt's job, not the cap's;
+      // output is billed on what is actually produced.
     });
     const text = answer.text.trim();
-    // A refusal or an empty answer is not a reply. Fall back rather than show
-    // the founder a blank turn.
-    return answer.refusal || text.length === 0 ? result.reply : text;
+    // A refusal, an empty answer, or one cut off mid-sentence is not a reply.
+    // Fall back rather than show the founder a blank or half-finished turn.
+    return answer.refusal || text.length === 0 || answer.stopReason === 'max_tokens'
+      ? result.reply
+      : text;
   } catch {
     return result.reply;
   }

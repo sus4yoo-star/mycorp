@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import SiteNav from '../components/SiteNav';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,15 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span className="wordmark">MYCORP24</span>{' '}
               <span className="endorse">by AMOV</span>
             </div>
-            <nav>
-              <Link href="/">홈</Link>
-              <Link href="/briefing">보고</Link>
-              <Link href="/chat">비서실</Link>
-              <Link href="/approvals">결재실</Link>
-              <Link href="/competitors">경쟁사</Link>
-              <Link href="/connect">연결</Link>
-              <Link href="/hq">본사</Link>
-            </nav>
+            <SiteNav />
           </div>
         </header>
         {children}
