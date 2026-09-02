@@ -1,11 +1,8 @@
 name: Smoke
 
-# What is actually being served, from outside.
-#
-# A deploy going green says the build produced files. It does not say the
-# server-rendered routes are reachable — a missing Next.js runtime publishes the
-# static pages and lets every dynamic route fall through to Netlify's own 404,
-# which looks like a broken link rather than a broken deploy.
+# Ask the deployed site what it actually serves, on demand.
+# The same check runs at the end of every deploy; this is for asking again
+# without shipping anything.
 on:
   workflow_dispatch:
 
@@ -13,31 +10,13 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - name: what answers
         env:
           APP_URL: ${{ secrets.MYCORP24_APP_URL }}
         run: |
           if [ -z "$APP_URL" ]; then
-            echo "::notice::MYCORP24_APP_URL is not set."
+            echo "::notice::MYCORP24_APP_URL is not set — nothing to probe."
             exit 0
           fi
-
-          # Static pages must be 200. The rest redirect when signed out — the
-          # only wrong answer for them is 404, which means nothing served them.
-          probe() {
-            path="$1"; expect="$2"
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "${APP_URL}${path}" || echo 000)
-            printf '%-34s %s   (expected %s)\n' "$path" "$code" "$expect"
-            [ "$code" = "404" ] && echo "::error::${path} is a 404 — nothing is serving it"
-            return 0
-          }
-
-          echo "probing $APP_URL"
-          probe /                  "200"
-          probe /login             "200"
-          probe /auth/callback     "3xx to /login"
-          probe /hq                "3xx when signed out"
-          probe /briefing          "200 or 3xx"
-          probe /chat              "200 or 3xx"
-          probe /onboarding        "200 or 3xx"
-          probe /api/oauth/google/start "3xx or 4xx, never 404"
+          scripts/smoke.sh

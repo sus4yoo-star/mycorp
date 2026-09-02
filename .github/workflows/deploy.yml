@@ -131,3 +131,13 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npx --yes netlify-cli@latest deploy --build --prod --filter @mycorp24/web
+
+      # A deploy can go green having published a site that serves nothing: lose
+      # the Next.js runtime and every route falls through to Netlify's own 404
+      # while the CDN reports success. That has happened here. Ask the live site
+      # before calling the deploy done.
+      - name: is it actually serving
+        if: ${{ needs.preflight.outputs.app_url == 'true' }}
+        env:
+          APP_URL: ${{ secrets.MYCORP24_APP_URL }}
+        run: scripts/smoke.sh
