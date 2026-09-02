@@ -35,7 +35,7 @@ Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
 
 ### Netlify 사이트가 아직 없다면
 
-`netlify.toml`이 이미 저장소에 있으므로, Netlify에서 이 저장소를 한 번만 연결하면
+`apps/web/netlify.toml`이 이미 저장소에 있으므로, Netlify에서 이 저장소를 한 번만 연결하면
 사이트가 생깁니다. 그 뒤 Project configuration → General의 **Project ID**(= Site ID)를
 위 시크릿에 넣으십시오.
 
