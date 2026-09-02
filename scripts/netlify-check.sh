@@ -47,17 +47,33 @@ else
   exit 1
 fi
 
-echo "▸ is the account itself blocked?"
+echo "▸ has the account run out of something?"
 code="$(api accounts)"
 say "GET /accounts" "$code"
 if [ "$code" = "200" ]; then
-  jq -r '.[] | "  \(.slug): type=\(.type_name // "?") capabilities=\(.capabilities | keys | join(","))"' \
-    /tmp/nf.json 2>/dev/null | head -20
+  say "plan" "$(jq -r '.[0].type_name // "?"' /tmp/nf.json)"
+  # Only the metered capabilities: a name with numbers beside it is a limit
+  # that can be reached. Anything at or past its allowance is the answer.
+  jq -r '
+    .[0].capabilities
+    | to_entries[]
+    | select(.value | type == "object")
+    | select(.value.included != null or .value.used != null)
+    | "  \(.key): used=\(.value.used // "?") of \(.value.included // "?")"
+  ' /tmp/nf.json 2>/dev/null | sort
+else
+  say "message" "$(jq -r '.message // .error // "no message"' /tmp/nf.json 2>/dev/null)"
+fi
+
+echo "▸ what did the last deploys say?"
+code="$(api "sites/${NETLIFY_SITE_ID}/deploys?per_page=5")"
+say "GET /deploys" "$code"
+if [ "$code" = "200" ]; then
+  jq -r '.[] | "  \(.created_at)  \(.state)  \(.error_message // "")"' /tmp/nf.json 2>/dev/null
 else
   say "message" "$(jq -r '.message // .error // "no message"' /tmp/nf.json 2>/dev/null)"
 fi
 
 echo
-echo "Token and site both answer. If the deploy still returns Forbidden, the"
-echo "refusal is about the deploy itself — a plan limit or a hold on the"
-echo "account — and app.netlify.com will say which."
+echo "Token and site both answer. If nothing above is exhausted, the refusal is"
+echo "a hold on the account rather than a limit, and app.netlify.com will say so."
