@@ -20,3 +20,19 @@ jobs:
             exit 0
           fi
           scripts/smoke.sh
+
+  netlify:
+    name: why is netlify refusing us
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: ask netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
+            echo "::notice::Netlify secrets are not set — nothing to ask."
+            exit 0
+          fi
+          scripts/netlify-check.sh
