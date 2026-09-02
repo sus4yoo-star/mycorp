@@ -441,16 +441,22 @@ export async function consumeOAuthState(
   state: string,
   provider: string,
 ): Promise<ConsumedState | null> {
+  // Delete and read in one statement. Selecting first and deleting after leaves
+  // a window where two requests both read the row before either removes it, so
+  // the state would be single-use only most of the time — and "most of the
+  // time" is not a property a replay defence can be built on. Row level
+  // security already confines these rows to the user who created them
+  // (0003_oauth_states.sql), so this closes the gap rather than being the only
+  // thing holding it shut; a later policy change must not turn it into one.
   const { data, error } = await db
     .from('oauth_states')
-    .select('*')
+    .delete()
     .eq('state', state)
+    .select('*')
     .maybeSingle();
 
   if (error) throw new DbError('reading the OAuth handshake', error);
   if (!data) return null;
-
-  await db.from('oauth_states').delete().eq('state', state);
 
   if (data.provider !== provider) return null;
   if (Date.parse(data.expires_at) <= Date.now()) return null;

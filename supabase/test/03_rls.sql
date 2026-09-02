@@ -295,6 +295,53 @@ begin;
   end $$;
 rollback;
 
+-- The handshake is finished with a single DELETE ... RETURNING, so that two
+-- requests carrying the same state cannot both read the row before either
+-- removes it. These assert what that statement does on each side of the policy.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare
+    got int;
+  begin
+    insert into oauth_states (state, company_id, user_id, provider, code_verifier)
+    values ('state-consume', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            '11111111-1111-1111-1111-111111111111', 'GMAIL', 'verifier-c');
+
+    with taken as (
+      delete from oauth_states where state = 'state-consume' returning 1
+    ) select count(*) into got from taken;
+    assert got = 1, 'TEST FAILED: the owner could not consume their own handshake';
+
+    -- Consuming it again must find nothing. This is the single-use property.
+    with taken as (
+      delete from oauth_states where state = 'state-consume' returning 1
+    ) select count(*) into got from taken;
+    assert got = 0, 'TEST FAILED: the same handshake was consumed twice';
+  end $$;
+rollback;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  insert into oauth_states (state, company_id, user_id, provider)
+  values ('state-theirs', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '11111111-1111-1111-1111-111111111111', 'GMAIL');
+
+  -- A colleague consuming it must delete nothing and learn nothing.
+  set local request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222"}';
+  do $$
+  declare
+    got int;
+  begin
+    with taken as (
+      delete from oauth_states where state = 'state-theirs' returning 1
+    ) select count(*) into got from taken;
+    assert got = 0, 'TEST FAILED: another member consumed someone else''s handshake';
+  end $$;
+rollback;
+
 \echo 'RLS(oauth): all checks passed'
 
 -- ---------------------------------------------------------------------------
