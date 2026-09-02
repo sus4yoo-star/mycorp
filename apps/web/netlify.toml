@@ -1,26 +1,27 @@
 # MYCORP24 — Netlify deployment (spec §73.1)
 #
-# This lives in apps/web, not the repo root, because the repo is a pnpm
-# workspace. Netlify's CLI refuses to deploy a monorepo it cannot disambiguate:
+# This file lives in apps/web rather than the repo root because the repo is a
+# pnpm workspace: Netlify's CLI will not deploy a monorepo it cannot
+# disambiguate, so the deploy names the package (`--filter @mycorp24/web`) and
+# that is the config it reads.
 #
-#   Error: Projects detected: @mycorp24/mobile, @mycorp24/web, …
-#
-# The deploy names the package (`--filter @mycorp24/web`), which makes this
-# directory the build base — so every path below is relative to apps/web, and
-# the plugin and headers must be declared here rather than at the root, where
-# nothing would read them.
+# What --filter does NOT do is move the build. The deploy still runs from the
+# repository root — a run with `publish = ".next"` here resolved it to
+# <repo>/.next and failed — so every path below is relative to the root, not to
+# this directory. The file's location selects it; it does not rebase it.
 
 [build]
-  command = "pnpm run build"
-  publish = ".next"
+  command = "pnpm turbo run build --filter=@mycorp24/web"
+  publish = "apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "22"
   # Corepack lets Netlify use the pnpm version pinned in package.json.
   NETLIFY_USE_PNPM = "true"
 
-# /hq and the API routes are server-rendered; without this the deploy would
-# succeed and the dynamic routes would 404.
+# /hq, the API routes and the auth callback are server-rendered. Without this
+# the deploy succeeds and every one of them 404s, so its absence would be a
+# green build and a broken site.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
