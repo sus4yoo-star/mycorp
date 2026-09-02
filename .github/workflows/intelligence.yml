@@ -1,0 +1,41 @@
+name: Intelligence
+
+# Watches competitors and prepares proposals while nobody is at a keyboard.
+# This is the whole point of §156: the company notices things on its own.
+#
+# Needs MYCORP24_CRON_SECRET (matching the deployed app) and MYCORP24_APP_URL.
+# Without them the job says so and exits cleanly rather than failing daily.
+on:
+  schedule:
+    # 06:10 KST — before the founder reads the morning briefing.
+    - cron: '10 21 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: intelligence
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: run a pass
+        env:
+          APP_URL: ${{ secrets.MYCORP24_APP_URL }}
+          CRON_SECRET: ${{ secrets.MYCORP24_CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::notice::MYCORP24_APP_URL or MYCORP24_CRON_SECRET is not set — skipping. See docs/SETUP.md."
+            exit 0
+          fi
+
+          code=$(curl -sS -o /tmp/out.json -w '%{http_code}' --max-time 600 \
+            -X POST "$APP_URL/api/intelligence/collect" \
+            -H "x-mycorp24-cron: $CRON_SECRET" \
+            -H 'content-type: application/json' \
+            -d '{}') || { echo "::error::request failed"; exit 1; }
+
+          echo "HTTP $code"
+          # The body carries per-company results, including errors. Never a token.
+          cat /tmp/out.json
+          [ "$code" = "200" ] || { echo "::error::collection returned $code"; exit 1; }

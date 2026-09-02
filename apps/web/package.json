@@ -1,0 +1,35 @@
+{
+  "name": "@mycorp24/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mycorp24/agent-types": "workspace:*",
+    "@mycorp24/business-logic": "workspace:*",
+    "@mycorp24/types": "workspace:*",
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "@mycorp24/chat": "workspace:*",
+    "@mycorp24/db": "workspace:*",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
+    "server-only": "^0.0.1",
+    "@mycorp24/integrations": "workspace:*",
+    "@mycorp24/vault": "workspace:*",
+    "@mycorp24/tool-gateway": "workspace:*",
+    "@mycorp24/intelligence": "workspace:*",
+    "@mycorp24/ai-gateway": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "5.9.3"
+  }
+}

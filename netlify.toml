@@ -1,0 +1,25 @@
+# MYCORP24 — Netlify deployment (spec §73.1)
+#
+# The web app is a workspace package, so the build runs from the repo root and
+# Netlify is pointed at apps/web. The Next.js runtime plugin handles the
+# server-rendered routes (/hq reads searchParams and is dynamic).
+
+[build]
+  command = "pnpm turbo run build --filter=@mycorp24/web"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Corepack lets Netlify use the pnpm version pinned in package.json.
+  NETLIFY_USE_PNPM = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

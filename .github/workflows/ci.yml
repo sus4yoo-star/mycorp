@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm turbo run typecheck test build
+
+      # The consolidated schema is generated from the migrations. If it drifts,
+      # someone pasting supabase/schema.sql gets a different database from
+      # someone running `supabase db push`.
+      - name: schema.sql is in sync with the migrations
+        run: |
+          pnpm build:schema
+          git diff --exit-code --stat supabase/schema.sql \
+            || { echo "::error::supabase/schema.sql is stale — run: pnpm build:schema"; exit 1; }
+
+  database:
+    name: row level security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Boots its own throwaway cluster from the Postgres already on the
+      # runner. Attacks the policies rather than describing them: cross-tenant
+      # reads and writes, approving as a non-founder, reading stored
+      # credentials, rewriting an audit event, acting with no JWT.
+      - name: policy tests
+        run: bash scripts/db-test.sh

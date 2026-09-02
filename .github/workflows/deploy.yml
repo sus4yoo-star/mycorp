@@ -1,0 +1,111 @@
+name: Deploy
+
+# Applies database migrations and ships the web app. Runs on every push to
+# main, and can be started by hand from the GitHub UI or mobile app — which is
+# the point: shipping should not require being at a computer.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_migrations:
+        description: 'Skip supabase db push'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  # Secrets are not readable in a job-level `if`, so decide here and gate the
+  # real jobs on these outputs. Without this, a repository that has not been
+  # configured yet fails on every push and the failures become background noise.
+  preflight:
+    name: what is configured
+    runs-on: ubuntu-latest
+    outputs:
+      supabase: ${{ steps.check.outputs.supabase }}
+      netlify: ${{ steps.check.outputs.netlify }}
+    steps:
+      - id: check
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ] && [ -n "$SUPABASE_PROJECT_ID" ] && [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            echo "supabase=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "supabase=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Supabase secrets are not set — skipping migrations. See docs/SETUP.md."
+          fi
+          if [ -n "$NETLIFY_AUTH_TOKEN" ] && [ -n "$NETLIFY_SITE_ID" ]; then
+            echo "netlify=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "netlify=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Netlify secrets are not set — skipping deploy. See docs/SETUP.md."
+          fi
+
+  migrate:
+    name: supabase db push
+    needs: preflight
+    if: needs.preflight.outputs.supabase == 'true' && !inputs.skip_migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: link and push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_ID }}"
+          supabase db push
+
+      # Migrations can succeed while leaving the database unsafe — a table
+      # created without RLS, a policy accidentally added to the credential
+      # table. Assert the invariants against the real project.
+      - name: verify the deployed schema
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase db execute --file supabase/verify.sql \
+            || psql "$(supabase status -o env 2>/dev/null | grep -m1 DB_URL | cut -d= -f2- | tr -d '\"')" \
+                 -v ON_ERROR_STOP=1 -f supabase/verify.sql
+
+  deploy:
+    name: netlify
+    needs: [preflight, migrate]
+    # `always()` so a skipped migration job does not skip the deploy with it,
+    # but a *failed* migration still stops us shipping code against a database
+    # that did not get its schema.
+    if: always() && needs.preflight.outputs.netlify == 'true' && needs.migrate.result != 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: build and deploy
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          # Public values, needed at build time so the client bundle can reach
+          # Supabase. The service role key and the credential key are set in
+          # Netlify's own environment, never here: they belong to the running
+          # server, not to the build.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npx --yes netlify-cli@latest deploy --build --prod
