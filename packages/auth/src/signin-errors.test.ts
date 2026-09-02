@@ -46,3 +46,32 @@ describe('explainSignInError', () => {
     }
   });
 });
+
+describe('explainSignInError — password sign in and sign up', () => {
+  // Saying "no such account" or "wrong password" tells an attacker which
+  // addresses are registered. One message covers both.
+  it('does not reveal which half of the credentials was wrong', () => {
+    const r = explainSignInError(new Error('Invalid login credentials'));
+    expect(r.message).toContain('이메일 또는 비밀번호');
+    expect(r.message).not.toMatch(/없는 계정|가입되지|등록되지/);
+  });
+
+  it('sends an existing account to sign in rather than to retry', () => {
+    const r = explainSignInError(new Error('User already registered'));
+    expect(r.retryable).toBe(false);
+    expect(r.message).toContain('로그인');
+  });
+
+  it('says how long the password must be', () => {
+    const r = explainSignInError({ code: 'weak_password', message: 'Password should be at least 6 characters' });
+    expect(r.message).toContain('8자');
+    expect(r.retryable).toBe(true);
+  });
+
+  // Pointing at an inbox that will stay empty is worse than saying nothing.
+  it('names the real blocker for an unconfirmed account', () => {
+    const r = explainSignInError(new Error('Email not confirmed'));
+    expect(r.message).toContain('SMTP');
+    expect(r.retryable).toBe(false);
+  });
+});
