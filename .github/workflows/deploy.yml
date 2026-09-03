@@ -132,6 +132,16 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npx --yes netlify-cli@latest deploy --build --prod --filter @mycorp24/web
 
+      # The CLI reports a refusal as a bare "JSONHTTPError: Forbidden", which
+      # cost an hour to trace to an exhausted account the first time. Ask
+      # Netlify what it means while the failure is still on screen.
+      - name: why did that fail
+        if: failure()
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: scripts/netlify-check.sh || true
+
       # A deploy can go green having published a site that serves nothing: lose
       # the Next.js runtime and every route falls through to Netlify's own 404
       # while the CDN reports success. That has happened here. Ask the live site
