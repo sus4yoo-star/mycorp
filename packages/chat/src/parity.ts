@@ -32,6 +32,11 @@ export const UI_CHAT_PARITY: readonly ParityEntry[] = [
     utterances: ['Gmail 연결해', '인스타 연결해줘', '네이버 연동해'],
   },
   {
+    route: '/work',
+    uiAction: '업무 > 진행 현황',
+    utterances: ['업무 뭐 있어?', '업무 현황 보여줘', '일감 목록'],
+  },
+  {
     route: '/hq',
     uiAction: '본사 > 직원 현황',
     utterances: ['직원들 뭐하고 있어?', '본사 화면 보여줘'],

@@ -84,6 +84,7 @@ const RULES: readonly Rule[] = [
   { intent: 'LIST_APPROVALS', re: /결재.{0,10}(있|뭐|목록|대기|남)|approvals?\s*(pending|list)?/i },
   { intent: 'AGENT_STATUS', re: /(직원|임직원|팀).{0,10}(뭐|어떻|상태|하고)|누가\s*일|agent\s*status/i },
   { intent: 'OPEN_ROUTE', re: /(화면|페이지|screen|page).{0,10}(보여|열어|가|open|show)/i },
+  { intent: 'OPEN_ROUTE', re: /(업무|일감).{0,8}(보여|뭐|어때|현황|목록|어디)/ },
   { intent: 'SHOW_REPORT', re: /보고서|report/i },
   { intent: 'UPDATE_PREFERENCE', re: /(보고|알림|리포트).{0,20}(시에|시\s*에|아침|저녁|밤|짧게|줄\s*안|간단)/i },
   { intent: 'SHOW_METRIC', re: /(매출|광고비|예약|팔로워|구독자|revenue|spend).{0,20}(어때|얼마|알려|보여|어떻|how)/i },
@@ -379,7 +380,7 @@ export function respond(
       });
 
     case 'OPEN_ROUTE': {
-      const route_ = e.route ?? detectRouteFallback(utterance);
+      const route_ = e.route;
       if (!route_) {
         return done(`${addr}, 어느 화면으로 갈까요?`, { kind: 'CLARIFY' });
       }
@@ -442,14 +443,11 @@ const REQUIRED_PROVIDER: Record<string, string | undefined> = {
   FOLLOWERS: 'INSTAGRAM',
 };
 
-const detectRouteFallback = (t: string): string | undefined => {
-  if (/광고/.test(t)) return '/analytics/ads';
-  if (/결재/.test(t)) return '/approvals';
-  if (/본사|건물/.test(t)) return '/hq';
-  if (/보고서/.test(t)) return '/reports';
-  if (/연결|연동/.test(t)) return '/connect';
-  return undefined;
-};
+// The screen a phrase names is decided in one place, `ROUTES` in entities.ts.
+// There used to be a second table here, and it was the one that ran: entity
+// extraction never set `route` at all, so adding a screen to the table that
+// looks authoritative changed nothing. Two tables for one question drift, and
+// the one that drifts silently is worse than the one that errors.
 
 /**
  * Route with a model fallback for utterances the rules miss.

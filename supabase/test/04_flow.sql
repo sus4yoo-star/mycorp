@@ -137,4 +137,67 @@ begin;
   end $$;
 rollback;
 
+-- Work: an instruction becomes a draft the founder decides on — spec §112, §164.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare
+    t uuid;
+  begin
+    insert into tasks (company_id, title, instruction, division_key, status)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '리뷰 답변 초안',
+            '리뷰 답변 좀 준비해줘', 'CUSTOMER_EXPERIENCE', 'IN_PROGRESS')
+    returning id into t;
+
+    -- The state that did not exist before: a draft is finished and waiting on
+    -- the founder. Without it a task goes from being written to done, and the
+    -- approval gate has nowhere to sit.
+    update tasks
+       set status = 'AWAITING_APPROVAL', deliverable = '초안 본문', delivered_at = now()
+     where id = t;
+    assert (select status from tasks where id = t) = 'AWAITING_APPROVAL',
+      'a delivered draft could not wait for the founder';
+  end $$;
+
+  -- A task cannot claim to be delivered with nothing to show. Reporting work
+  -- that produced nothing is the failure this product must not have.
+  do $$
+  declare
+    t uuid;
+  begin
+    insert into tasks (company_id, title, instruction, status)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '빈 결과물', '해줘', 'TODO')
+    returning id into t;
+    update tasks set status = 'DONE' where id = t;
+    raise exception 'TEST FAILED: a task was completed with no deliverable';
+  exception when check_violation then null;
+  end $$;
+
+  -- Work the founder does themselves has no deliverable to produce.
+  do $$
+  begin
+    insert into tasks (company_id, title, owner_kind, status, instruction)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '사업자등록 갱신',
+            'FOUNDER', 'DONE', '이건 제가 합니다');
+  end $$;
+rollback;
+
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  insert into tasks (company_id, title, instruction)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '남의 일', '해줘');
+
+  -- Work is as tenant-scoped as everything else.
+  set local request.jwt.claims = '{"sub":"55555555-5555-5555-5555-555555555555"}';
+  do $$
+  declare seen int;
+  begin
+    select count(*) into seen from tasks
+     where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    assert seen = 0, 'TEST FAILED: an outsider read another company''s work';
+  end $$;
+rollback;
+
 \echo 'FLOW: all checks passed'

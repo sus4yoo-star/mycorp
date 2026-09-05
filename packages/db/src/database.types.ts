@@ -66,6 +66,25 @@ export type AgentRow = {
   created_at: string;
 };
 
+export type TaskRow = {
+  id: string;
+  company_id: string;
+  title: string;
+  detail: string | null;
+  division_key: string | null;
+  agent_id: string | null;
+  owner_kind: 'AGENT' | 'FOUNDER';
+  status: 'TODO' | 'IN_PROGRESS' | 'AWAITING_APPROVAL' | 'BLOCKED' | 'DONE' | 'CANCELLED';
+  classification: SecurityLevelRow;
+  due_at: string | null;
+  instruction: string | null;
+  deliverable: string | null;
+  delivered_at: string | null;
+  approval_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ExecutiveRow = {
   id: string;
   company_id: string;
@@ -289,6 +308,7 @@ export type Database = {
       >;
       divisions: Table<DivisionRow, Pick<DivisionRow, 'company_id' | 'division_key'> & Partial<DivisionRow>>;
       executives: Table<ExecutiveRow, Pick<ExecutiveRow, 'company_id' | 'role'> & Partial<ExecutiveRow>>;
+      tasks: Table<TaskRow, Pick<TaskRow, 'company_id' | 'title'> & Partial<TaskRow>>;
       agents: Table<
         AgentRow,
         Pick<AgentRow, 'company_id' | 'display_name' | 'division_key'> & Partial<AgentRow>

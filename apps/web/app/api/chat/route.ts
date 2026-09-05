@@ -10,6 +10,8 @@ import {
 } from '@mycorp24/chat';
 import { createAiProvider } from '@mycorp24/ai-gateway';
 import { getCurrentCompany, listAgents, listPendingApprovals } from '@mycorp24/db';
+import { formatAddress } from '@mycorp24/business-logic';
+import { runInstruction } from '../../../lib/work';
 import { getServerClient, getSessionUser } from '../../../lib/supabase/server';
 import { isSupabaseConfigured } from '../../../lib/supabase/config';
 
@@ -32,6 +34,13 @@ import { isSupabaseConfigured } from '../../../lib/supabase/config';
  *     exploration of the interface, where there is no company to misrepresent —
  *     and the model is not called there (§151).
  */
+
+/**
+ * An instruction can now become work, and work costs a second model call: one
+ * to write the draft and one to say what happened. Well inside the limit, but
+ * not inside the default.
+ */
+export const maxDuration = 120;
 
 const DEMO_FOUNDER: FounderIdentity = {
   ownerDisplayName: '유상철',
@@ -128,9 +137,74 @@ export async function POST(request: Request) {
 
   const ctx = await liveContext(db, current);
   const result = routeUtterance(message, ctx);
-  const reply = await speak(message, result, ctx);
 
+  // An instruction the router has no product action for is not nothing — it is
+  // usually work. Only an instruction: a question about how something is done
+  // must never start doing it, and only when the router found nothing, so
+  // "결재할 거 있어?" stays a question about approvals rather than becoming a task.
+  if (result.classification.intent === 'UNKNOWN' && result.classification.mood === 'INSTRUCTION') {
+    const worked = await asWork(db, current, message, ctx);
+    if (worked) return NextResponse.json({ ...worked, live: true });
+  }
+
+  const reply = await speak(message, result, ctx);
   return NextResponse.json({ ...result, reply, live: true });
+}
+
+/**
+ * Turn an instruction into work, when it is work.
+ *
+ * Returns null when the company cannot place it, so the ordinary reply happens
+ * instead of a task nobody owns. What it does place, it describes exactly: the
+ * founder is told a draft is waiting, never that something was done.
+ */
+async function asWork(
+  db: Db,
+  current: Current,
+  message: string,
+  ctx: RouterContext,
+): Promise<RouterResult | null> {
+  const address = formatAddress(current.founder);
+  const outcome = await runInstruction(
+    db,
+    { companyId: current.companyId, companyName: current.companyName, address },
+    message,
+  );
+
+  if (outcome.kind === 'UNCLEAR') return null;
+
+  if (outcome.kind === 'NO_DIVISION') {
+    // §215: the company can grow a division, but not without being asked.
+    const result: RouterResult = {
+      classification: { intent: 'UNKNOWN', entities: {}, confidence: 1, mood: 'INSTRUCTION' },
+      reply:
+        `${address}, 그 일을 맡을 부서가 아직 없습니다. ` +
+        `${outcome.wanted} 부서를 신설하면 처리할 수 있습니다.`,
+      cards: [],
+      nextStep: { kind: 'NAVIGATE', route: '/hq' },
+    };
+    return { ...result, reply: await speak(message, result, ctx) };
+  }
+
+  if (outcome.kind === 'BLOCKED') {
+    const result: RouterResult = {
+      classification: { intent: 'UNKNOWN', entities: {}, confidence: 1, mood: 'INSTRUCTION' },
+      reply: `${address}, 진행하지 못했습니다. ${outcome.reason}`,
+      cards: [],
+      nextStep: { kind: 'NAVIGATE', route: '/work' },
+    };
+    return { ...result, reply: await speak(message, result, ctx) };
+  }
+
+  const result: RouterResult = {
+    classification: { intent: 'UNKNOWN', entities: {}, confidence: 1, mood: 'INSTRUCTION' },
+    reply: outcome.needsApproval
+      ? `${address}, 초안을 준비했습니다. 결재실에서 확인하시고 결정해 주십시오.`
+      : `${address}, 정리해 두었습니다. 업무 화면에서 보실 수 있습니다.`,
+    cards: [],
+    nextStep: { kind: 'NAVIGATE', route: outcome.needsApproval ? '/approvals' : '/work' },
+  };
+  return { ...result, reply: await speak(message, result, ctx) };
 }
 
 /**

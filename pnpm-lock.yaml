@@ -81,6 +81,9 @@ importers:
       '@mycorp24/vault':
         specifier: workspace:*
         version: link:../../packages/vault
+      '@mycorp24/work':
+        specifier: workspace:*
+        version: link:../../packages/work
       '@supabase/ssr':
         specifier: ^0.12.5
         version: 0.12.5(@supabase/supabase-js@2.112.4)
@@ -279,6 +282,9 @@ importers:
       '@mycorp24/ai-gateway':
         specifier: workspace:*
         version: link:../ai-gateway
+      '@mycorp24/business-logic':
+        specifier: workspace:*
+        version: link:../business-logic
       '@mycorp24/types':
         specifier: workspace:*
         version: link:../types
@@ -338,6 +344,34 @@ importers:
       '@mycorp24/types':
         specifier: workspace:*
         version: link:../types
+    devDependencies:
+      '@types/node':
+        specifier: ^26.4.0
+        version: 26.4.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@26.4.0)(vite@8.2.2(@types/node@26.4.0)(terser@5.51.2)(yaml@2.9.0))
+
+  packages/work:
+    dependencies:
+      '@mycorp24/agent-types':
+        specifier: workspace:*
+        version: link:../agent-types
+      '@mycorp24/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
+      '@mycorp24/business-logic':
+        specifier: workspace:*
+        version: link:../business-logic
+      '@mycorp24/types':
+        specifier: workspace:*
+        version: link:../types
+      zod:
+        specifier: ^4.5.4
+        version: 4.5.4
     devDependencies:
       '@types/node':
         specifier: ^26.4.0

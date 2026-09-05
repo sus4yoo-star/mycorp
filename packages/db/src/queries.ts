@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FounderIdentity } from '@mycorp24/types';
 import type { Division, ExecutiveRole } from '@mycorp24/agent-types';
 import { resolvePreset, staffFor, type IndustryPreset } from '@mycorp24/business-logic';
-import type { AgentRow, ApprovalRow, Database, MembershipRoleRow } from './database.types';
+import type { AgentRow, ApprovalRow, Database, MembershipRoleRow, TaskRow } from './database.types';
 
 /**
  * Data access.
@@ -896,4 +896,110 @@ export async function finishIntelligenceRun(
     })
     .eq('id', runId);
   if (res.error) throw new DbError('finishing the intelligence run', res.error);
+}
+
+// ---------------------------------------------------------------------------
+// Work — spec §112, §164
+// ---------------------------------------------------------------------------
+
+/**
+ * Open a task from something the founder actually said.
+ *
+ * `instruction` is required rather than optional: work the company invented for
+ * itself and work the founder asked for must be told apart, and the only
+ * reliable way is to record the sentence that started it (§151).
+ */
+export async function createTask(
+  db: Db,
+  input: {
+    readonly companyId: string;
+    readonly title: string;
+    readonly instruction: string;
+    readonly divisionKey: string;
+    readonly agentId?: string;
+  },
+): Promise<TaskRow> {
+  const res = await db
+    .from('tasks')
+    .insert({
+      company_id: input.companyId,
+      title: input.title,
+      instruction: input.instruction,
+      division_key: input.divisionKey,
+      ...(input.agentId ? { agent_id: input.agentId } : {}),
+      status: 'IN_PROGRESS' as const,
+    })
+    .select('*')
+    .single();
+  return unwrap(res, 'opening the task');
+}
+
+/** Record the draft and where it now waits. */
+export async function deliverTask(
+  db: Db,
+  input: {
+    readonly taskId: string;
+    readonly companyId: string;
+    readonly deliverable: string;
+    readonly approvalId?: string;
+  },
+): Promise<TaskRow> {
+  const res = await db
+    .from('tasks')
+    .update({
+      deliverable: input.deliverable,
+      delivered_at: new Date().toISOString(),
+      // Work that needs a decision waits for one; work that does not is done.
+      status: input.approvalId ? ('AWAITING_APPROVAL' as const) : ('DONE' as const),
+      ...(input.approvalId ? { approval_id: input.approvalId } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.taskId)
+    .eq('company_id', input.companyId)
+    .select('*')
+    .single();
+  return unwrap(res, 'delivering the task');
+}
+
+/** Stop the task and say why, in words the founder can act on. */
+export async function blockTask(
+  db: Db,
+  input: { readonly taskId: string; readonly companyId: string; readonly reason: string },
+): Promise<TaskRow> {
+  const res = await db
+    .from('tasks')
+    .update({
+      status: 'BLOCKED' as const,
+      detail: input.reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.taskId)
+    .eq('company_id', input.companyId)
+    .select('*')
+    .single();
+  return unwrap(res, 'blocking the task');
+}
+
+/** Everything still in flight, newest first. */
+export async function listOpenTasks(db: Db, companyId: string): Promise<readonly TaskRow[]> {
+  const res = await db
+    .from('tasks')
+    .select('*')
+    .eq('company_id', companyId)
+    .in('status', ['TODO', 'IN_PROGRESS', 'AWAITING_APPROVAL', 'BLOCKED'])
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return unwrap(res, 'reading the work in progress');
+}
+
+/** Recently finished work, so the founder can see what the company did. */
+export async function listFinishedTasks(db: Db, companyId: string): Promise<readonly TaskRow[]> {
+  const res = await db
+    .from('tasks')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('status', 'DONE')
+    .order('updated_at', { ascending: false })
+    .limit(20);
+  return unwrap(res, 'reading finished work');
 }

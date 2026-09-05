@@ -50,6 +50,7 @@ const ROUTES: readonly { re: RegExp; route: string }[] = [
   { re: /본사|건물|hq|headquarters/i, route: '/hq' },
   { re: /보고서|report/i, route: '/reports' },
   { re: /연결|연동|integration|connect/i, route: '/connect' },
+  { re: /업무|일감|work/i, route: '/work' },
 ];
 
 const first = <T>(text: string, table: readonly { re: RegExp }[], pick: (row: never) => T): T | undefined => {
@@ -102,6 +103,7 @@ export function extractEntities(text: string): Entities {
     ...(detectMetric(text) ? { metric: detectMetric(text)! } : {}),
     ...(detectPeriod(text) ? { period: detectPeriod(text)! } : {}),
     ...(detectOrdinal(text) ? { ordinal: detectOrdinal(text)! } : {}),
+    ...(detectRoute(text) ? { route: detectRoute(text)! } : {}),
     ...(money ? { amount: money.amount, currency: money.currency } : {}),
     ...(/반려|거절|reject/i.test(text)
       ? { decision: 'REJECT' as const }

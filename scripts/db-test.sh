@@ -80,14 +80,23 @@ PSQL=("$BIN/psql" -h "$WORK/sock" -p "$PORT" -U postgres -v ON_ERROR_STOP=1)
 
 "${PSQL[@]}" -q -c "create database $DB;" >/dev/null
 
-echo "▸ applying migrations"
+# Every migration, in order, read from the directory. The list used to be
+# written out by hand here, and 0006 was added and simply not applied — the
+# suite passed without ever seeing it. A migration this file forgets is a
+# migration nothing tests, and nothing announces the omission.
+MIGRATIONS=()
+for f in "$ROOT"/supabase/migrations/*.sql; do
+  MIGRATIONS+=(-f "$f")
+done
+if [[ ${#MIGRATIONS[@]} -eq 0 ]]; then
+  echo "no migrations found under supabase/migrations" >&2
+  exit 1
+fi
+
+echo "▸ applying $(( ${#MIGRATIONS[@]} / 2 )) migrations"
 "${PSQL[@]}" -q -d "$DB" \
   -f "$ROOT/supabase/test/00_stub_supabase.sql" \
-  -f "$ROOT/supabase/migrations/0001_init.sql" \
-  -f "$ROOT/supabase/migrations/0002_found_company.sql" \
-  -f "$ROOT/supabase/migrations/0003_oauth_states.sql" \
-  -f "$ROOT/supabase/migrations/0004_memory_and_proposals.sql" \
-  -f "$ROOT/supabase/migrations/0005_competitor_snapshots.sql" \
+  "${MIGRATIONS[@]}" \
   -f "$ROOT/supabase/test/01_grants.sql" \
   -f "$ROOT/supabase/test/02_seed.sql" >/dev/null
 

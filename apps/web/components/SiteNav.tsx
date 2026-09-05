@@ -22,6 +22,7 @@ import { getBrowserClient } from '../lib/supabase/client';
 const ROOMS = [
   { href: '/briefing', label: '보고' },
   { href: '/chat', label: '비서실' },
+  { href: '/work', label: '업무' },
   { href: '/approvals', label: '결재실' },
   { href: '/competitors', label: '경쟁사' },
   { href: '/connect', label: '연결' },

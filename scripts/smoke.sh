@@ -27,6 +27,7 @@ paths=(
   /hq
   /briefing
   /chat
+  /work
   /connect
   /approvals
   /competitors
