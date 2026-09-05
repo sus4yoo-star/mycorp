@@ -201,7 +201,16 @@ async function asWork(
     reply: outcome.needsApproval
       ? `${address}, 초안을 준비했습니다. 결재실에서 확인하시고 결정해 주십시오.`
       : `${address}, 정리해 두었습니다. 업무 화면에서 보실 수 있습니다.`,
-    cards: [],
+    // The draft goes back in the conversation it was asked for. Without it the
+    // founder has only our word that anything was written.
+    cards: [
+      {
+        kind: 'DRAFT',
+        title: outcome.task.title,
+        body: outcome.task.deliverable ?? '',
+        needsApproval: outcome.needsApproval,
+      },
+    ],
     nextStep: { kind: 'NAVIGATE', route: outcome.needsApproval ? '/approvals' : '/work' },
   };
   return { ...result, reply: await speak(message, result, ctx) };

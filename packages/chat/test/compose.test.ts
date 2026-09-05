@@ -76,3 +76,39 @@ describe('the deterministic reply travels as ground truth', () => {
     expect(userPrompt(briefFor('인스타 연결해'))).toContain('인스타 연결해');
   });
 });
+
+describe('cards in the prompt', () => {
+  it('tells the writer what the founder can already see', () => {
+    // A reply saying "준비 중입니다" directly above a finished draft is the
+    // exact inconsistency that makes the chat read as theatre.
+    const prompt = systemPrompt(
+      buildBrief('리뷰 답변 준비해줘', {
+        classification: { intent: 'UNKNOWN', entities: {}, confidence: 1, mood: 'INSTRUCTION' },
+        reply: '초안을 준비했습니다.',
+        cards: [
+          { kind: 'DRAFT', title: '리뷰 답변', body: '초안 본문', needsApproval: true },
+        ],
+        nextStep: { kind: 'NAVIGATE', route: '/approvals' },
+      }, ctx()),
+    );
+
+    expect(prompt).toContain('리뷰 답변');
+    expect(prompt).toMatch(/결재실|결정만 남았습니다/);
+    expect(prompt).toMatch(/다시 옮겨 적지 마십시오/);
+    // The draft body itself is on screen; repeating it into the prompt only
+    // invites the reply to quote it back.
+    expect(prompt).not.toContain('초안 본문');
+  });
+
+  it('says nothing about cards when there are none', () => {
+    const prompt = systemPrompt(
+      buildBrief('안녕', {
+        classification: { intent: 'UNKNOWN', entities: {}, confidence: 1, mood: 'QUESTION' },
+        reply: '네, 회장님.',
+        cards: [],
+        nextStep: { kind: 'NONE' },
+      }, ctx()),
+    );
+    expect(prompt).not.toMatch(/카드로 보입니다|보입니다\./);
+  });
+});

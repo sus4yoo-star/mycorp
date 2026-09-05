@@ -79,6 +79,39 @@ function describeNextStep(step: NextStep): string {
   }
 }
 
+/**
+ * What the founder can already see next to the reply.
+ *
+ * The cards were assembled and then never mentioned to the writer, so a reply
+ * could say "준비 중입니다" directly above the finished draft. Anything on
+ * screen is a fact the reply has to be consistent with.
+ */
+function describeCards(cards: readonly GenerativeCard[]): readonly string[] {
+  return cards.map((card) => {
+    switch (card.kind) {
+      case 'DRAFT':
+        return (
+          `- 이미 작성된 초안 "${card.title}"이(가) 이 답변 바로 아래 그대로 보입니다. ` +
+          (card.needsApproval
+            ? '결재실에 올라가 있고 회장님 결정만 남았습니다. 내용을 다시 옮겨 적지 마십시오.'
+            : '업무 화면에 정리되어 있습니다. 내용을 다시 옮겨 적지 마십시오.')
+        );
+      case 'APPROVAL_LIST':
+        return `- 결재 대기 ${card.approvals.length}건의 목록이 함께 보입니다.`;
+      case 'METRIC':
+        return `- ${card.period} ${card.metric} 카드가 보입니다. ${card.ready ? '집계 중입니다.' : '연결된 데이터 소스가 없습니다.'}`;
+      case 'AGENT_STATUS':
+        return `- 업무 중인 AI 직원 ${card.working}명이 카드로 보입니다.`;
+      case 'CONNECT':
+        return `- ${card.provider} 연결 상태 카드가 보입니다: ${card.connected ? '연결됨' : '연결되지 않음'}.`;
+      case 'POLICY_CHANGE':
+        return `- 정책 변경 카드가 보입니다: ${card.summary}`;
+      case 'AUTOMATION':
+        return `- 자동화 카드가 보입니다: ${card.summary}`;
+    }
+  });
+}
+
 export function systemPrompt(brief: ReplyBrief): string {
   const connected =
     brief.connectedProviders.length > 0
@@ -98,6 +131,7 @@ export function systemPrompt(brief: ReplyBrief): string {
     `- 연결된 서비스: ${connected}`,
     `- 결재 대기: ${brief.pendingApprovalCount}건`,
     `- 업무 중인 AI 직원: ${brief.workingAgentCount}명`,
+    ...describeCards(brief.cards),
     '',
     '## 이 발화에 대해 이미 정해진 것',
     `- 의도: ${brief.intent}`,

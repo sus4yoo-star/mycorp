@@ -62,6 +62,25 @@ function Cards({ result }: { result: RouterResult }) {
                 </div>
               </div>
             );
+          case 'DRAFT':
+            return (
+              <div className="card" key={i}>
+                <div className="card-label">
+                  {card.needsApproval ? '초안 · 결재 대기' : '초안'}
+                </div>
+                <div className="card-row" style={{ fontWeight: 600 }}>{card.title}</div>
+                <pre
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    margin: '0.5rem 0 0',
+                    font: 'inherit',
+                    color: 'var(--ink)',
+                  }}
+                >
+                  {card.body}
+                </pre>
+              </div>
+            );
           case 'POLICY_CHANGE':
           case 'AUTOMATION':
             return (

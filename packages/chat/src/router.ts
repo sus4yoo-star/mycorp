@@ -39,7 +39,20 @@ export type GenerativeCard =
   | { readonly kind: 'AGENT_STATUS'; readonly working: number }
   | { readonly kind: 'CONNECT'; readonly provider: string; readonly connected: boolean }
   | { readonly kind: 'POLICY_CHANGE'; readonly summary: string }
-  | { readonly kind: 'AUTOMATION'; readonly summary: string };
+  | { readonly kind: 'AUTOMATION'; readonly summary: string }
+  /**
+   * The draft itself, in the conversation that asked for it.
+   *
+   * Telling the founder "초안을 준비했습니다" and making them go and look is how
+   * a chat starts to feel like a demo of a company rather than one. What was
+   * written is shown where it was asked for.
+   */
+  | {
+      readonly kind: 'DRAFT';
+      readonly title: string;
+      readonly body: string;
+      readonly needsApproval: boolean;
+    };
 
 export type NextStep =
   | { readonly kind: 'NONE' }
