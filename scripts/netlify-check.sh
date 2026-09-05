@@ -15,10 +15,17 @@ set -uo pipefail
 : "${NETLIFY_AUTH_TOKEN:?NETLIFY_AUTH_TOKEN is required}"
 : "${NETLIFY_SITE_ID:?NETLIFY_SITE_ID is required}"
 
+# curl already prints 000 when it cannot connect, so `|| echo 000` would append
+# a second one and yield "000000" — a value no comparison below expects. Capture
+# curl's own failure separately (same bug as scripts/smoke.sh had).
 api() {
-  curl -sS -o /tmp/nf.json -w '%{http_code}' --max-time 30 \
+  local code
+  if ! code="$(curl -sS -o /tmp/nf.json -w '%{http_code}' --max-time 30 \
     -H "Authorization: Bearer ${NETLIFY_AUTH_TOKEN}" \
-    "https://api.netlify.com/api/v1/$1" 2>/dev/null || echo 000
+    "https://api.netlify.com/api/v1/$1" 2>/dev/null)"; then
+    code=000
+  fi
+  printf '%s' "${code:-000}"
 }
 
 say() { printf '  %-22s %s\n' "$1" "$2"; }
@@ -29,6 +36,11 @@ say "GET /user" "$code"
 if [ "$code" = "200" ]; then
   say "account" "$(jq -r '.email // "?"' /tmp/nf.json | sed 's/\(..\).*@/\1***@/')"
 else
+  if [ "$code" = "000" ]; then
+    # Not a token problem. Saying so saves someone rotating a working secret.
+    echo "::error::api.netlify.com could not be reached at all. This says nothing about the token."
+    exit 1
+  fi
   say "message" "$(jq -r '.message // .error // "no message"' /tmp/nf.json 2>/dev/null)"
   echo "::error::The Netlify token is not being accepted. Regenerate it and update the NETLIFY_AUTH_TOKEN secret."
   exit 1

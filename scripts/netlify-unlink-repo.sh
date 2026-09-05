@@ -38,8 +38,13 @@ echo "▸ before"
 show_repo
 
 echo "▸ unlinking"
-code="$(curl -sS -o /tmp/unlink.json -w '%{http_code}' --max-time 30 \
-  -X PUT "${AUTH[@]}" "${BASE}/unlink_repo" 2>/dev/null || echo 000)"
+# Same care as elsewhere: curl prints 000 itself, so `|| echo 000` would make
+# "000000" and the numeric comparison below would read a garbage value.
+if ! code="$(curl -sS -o /tmp/unlink.json -w '%{http_code}' --max-time 30 \
+  -X PUT "${AUTH[@]}" "${BASE}/unlink_repo" 2>/dev/null)"; then
+  code=000
+fi
+code="${code:-000}"
 echo "  PUT /unlink_repo  $code"
 if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
   echo "  message: $(jq -r '.message // .error // "no message"' /tmp/unlink.json 2>/dev/null)" >&2
