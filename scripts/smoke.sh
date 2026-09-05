@@ -42,7 +42,15 @@ for path in "${paths[@]}"; do
   code=""
   # A single cold miss right after a publish is not evidence of a broken site.
   for attempt in 1 2 3; do
-    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "${base}${path}" || echo 000)"
+    # curl already prints 000 when it cannot connect, so `|| echo 000` used to
+    # append a second one and produce "000000" — which matched no case below
+    # and reported a site nobody could reach as healthy. The check has to fail
+    # on its own failure, or it is decoration.
+    if ! code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "${base}${path}" 2>/dev/null)"; then
+      code=000
+    fi
+    [ -n "$code" ] || code=000
+
     case "$code" in
       404|000) sleep 3 ;;
       *) break ;;
@@ -53,6 +61,9 @@ for path in "${paths[@]}"; do
   case "$code" in
     404) echo "::error::${path} returns 404 — the deploy is not serving it"; failed=1 ;;
     000) echo "::error::${path} could not be reached at all"; failed=1 ;;
+    5??) echo "::error::${path} returns ${code} — the deploy is serving errors"; failed=1 ;;
+    2??|3??|401|403) ;;
+    *) echo "::error::${path} returns an unexpected ${code}"; failed=1 ;;
   esac
 done
 
