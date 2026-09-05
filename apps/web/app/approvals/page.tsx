@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { formatAddress } from '@mycorp24/business-logic';
 import { decideApproval, getCurrentCompany, listPendingApprovals } from '@mycorp24/db';
 import { getServerClient, getSessionUser } from '../../lib/supabase/server';
+import { settleApproval } from '../../lib/handover';
 import { isSupabaseConfigured } from '../../lib/supabase/config';
 import SetupNotice from '../../components/SetupNotice';
 
@@ -32,7 +33,7 @@ async function decide(formData: FormData) {
   const current = await getCurrentCompany(db, user.id);
   if (!current) redirect('/onboarding');
 
-  await decideApproval(db, {
+  const approval = await decideApproval(db, {
     companyId: current.companyId,
     approvalId,
     userId: user.id,
@@ -40,7 +41,19 @@ async function decide(formData: FormData) {
     ...(note ? { note } : {}),
   });
 
+  // The decision is not the end of it. Work that waited on this approval is
+  // closed out now — carried out if it can be, and told plainly why not if it
+  // cannot. Leaving it in 결재 대기 would read as the company losing the work.
+  await settleApproval(db, {
+    companyId: current.companyId,
+    userId: user.id,
+    approval,
+    decision,
+    ...(note ? { note } : {}),
+  });
+
   revalidatePath('/approvals');
+  revalidatePath('/work');
 }
 
 export default async function Approvals() {

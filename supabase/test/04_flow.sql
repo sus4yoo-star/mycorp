@@ -200,4 +200,59 @@ begin;
   end $$;
 rollback;
 
+-- Settlement: a decision closes the work it was raised for — spec §112, §151.
+--
+-- The gap this covers is the one a founder feels: before it, approving left the
+-- task in AWAITING_APPROVAL for good, which from their chair looks identical to
+-- the company dropping the work.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare
+    t uuid;
+    touched int;
+  begin
+    insert into tasks (company_id, title, instruction, division_key, status,
+                       deliverable, delivered_at, approval_id)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '리뷰 답변 초안',
+            '리뷰 답변 준비해줘', 'CUSTOMER_EXPERIENCE', 'AWAITING_APPROVAL',
+            '초안 본문', now(), 'a0000000-0000-0000-0000-000000000001')
+    returning id into t;
+
+    -- The application finds the task by the approval it waits on.
+    assert (select count(*) from tasks
+             where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+               and approval_id = 'a0000000-0000-0000-0000-000000000001'
+               and status = 'AWAITING_APPROVAL') = 1,
+      'the task waiting on an approval could not be found by it';
+
+    -- Approved but nothing is connected: the honest ending is BLOCKED with a
+    -- reason, not DONE. DONE would tell the founder something left the building.
+    update tasks
+       set status = 'BLOCKED', detail = '승인은 기록되었습니다. 다만 연결이 없습니다.'
+     where id = t and status = 'AWAITING_APPROVAL';
+    get diagnostics touched = row_count;
+    assert touched = 1, 'an approved task could not be closed out';
+
+    -- Settling twice must not land: the same guard the application relies on.
+    update tasks set status = 'DONE' where id = t and status = 'AWAITING_APPROVAL';
+    get diagnostics touched = row_count;
+    assert touched = 0, 'TEST FAILED: a task was settled twice';
+  end $$;
+
+  -- Rejected work is cancelled, and CANCELLED must be a status the table accepts.
+  do $$
+  declare t uuid;
+  begin
+    insert into tasks (company_id, title, instruction, status, deliverable, delivered_at)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '반려된 초안', '해줘',
+            'AWAITING_APPROVAL', '초안 본문', now())
+    returning id into t;
+    update tasks set status = 'CANCELLED', detail = '회장님이 반려하셨습니다.' where id = t;
+    assert (select status from tasks where id = t) = 'CANCELLED',
+      'rejected work could not be cancelled';
+  end $$;
+rollback;
+
 \echo 'FLOW: all checks passed'

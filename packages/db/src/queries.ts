@@ -980,6 +980,56 @@ export async function blockTask(
   return unwrap(res, 'blocking the task');
 }
 
+/** The task an approval was raised for, if the work still waits on it. */
+export async function taskForApproval(
+  db: Db,
+  companyId: string,
+  approvalId: string,
+): Promise<TaskRow | null> {
+  const res = await db
+    .from('tasks')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('approval_id', approvalId)
+    .eq('status', 'AWAITING_APPROVAL')
+    .maybeSingle();
+  const { data, error } = res;
+  if (error) throw new DbError('reading the task behind the approval', error);
+  return data ?? null;
+}
+
+/**
+ * Close out a task the founder has decided on.
+ *
+ * DONE is reserved for work that actually happened. Approved work the company
+ * could not carry out ends BLOCKED with the reason, because telling a founder
+ * something is done when nothing left the building is the one failure this
+ * product cannot survive (§151).
+ */
+export async function settleTask(
+  db: Db,
+  input: {
+    readonly taskId: string;
+    readonly companyId: string;
+    readonly status: 'DONE' | 'CANCELLED' | 'BLOCKED';
+    readonly detail: string;
+  },
+): Promise<TaskRow> {
+  const res = await db
+    .from('tasks')
+    .update({
+      status: input.status,
+      detail: input.detail,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.taskId)
+    .eq('company_id', input.companyId)
+    .eq('status', 'AWAITING_APPROVAL')
+    .select('*')
+    .single();
+  return unwrap(res, 'closing the task');
+}
+
 /** Everything still in flight, newest first. */
 export async function listOpenTasks(db: Db, companyId: string): Promise<readonly TaskRow[]> {
   const res = await db
@@ -992,13 +1042,19 @@ export async function listOpenTasks(db: Db, companyId: string): Promise<readonly
   return unwrap(res, 'reading the work in progress');
 }
 
-/** Recently finished work, so the founder can see what the company did. */
+/**
+ * Recently settled work, so the founder can see what the company did.
+ *
+ * Cancelled work belongs here too. Rejecting something used to make it vanish
+ * from every screen, which reads as the company deleting the evidence rather
+ * than the founder having decided.
+ */
 export async function listFinishedTasks(db: Db, companyId: string): Promise<readonly TaskRow[]> {
   const res = await db
     .from('tasks')
     .select('*')
     .eq('company_id', companyId)
-    .eq('status', 'DONE')
+    .in('status', ['DONE', 'CANCELLED'])
     .order('updated_at', { ascending: false })
     .limit(20);
   return unwrap(res, 'reading finished work');

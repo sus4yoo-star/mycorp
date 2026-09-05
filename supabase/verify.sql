@@ -40,6 +40,29 @@ begin
     raise exception 'missing table(s): % — a migration did not run', missing;
   end if;
 
+  -- 0b. Columns a later migration adds are just as skippable by a wrong
+  --     repair, and their absence is silent: the app would fail at runtime on
+  --     the first instruction a founder gives.
+  select string_agg(c, ', ' order by c) into missing
+    from unnest(array['instruction', 'deliverable', 'delivered_at', 'approval_id']) as c
+   where not exists (
+     select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'tasks' and column_name = c);
+
+  if missing is not null then
+    raise exception 'tasks is missing column(s): % — migration 0006 did not run', missing;
+  end if;
+
+  -- 0c. A decision has to be able to close the work it was raised for.
+  select count(*) into n from pg_constraint
+   where conrelid = 'public.tasks'::regclass
+     and conname = 'tasks_status_check'
+     and pg_get_constraintdef(oid) like '%CANCELLED%'
+     and pg_get_constraintdef(oid) like '%AWAITING_APPROVAL%';
+  if n <> 1 then
+    raise exception 'tasks_status_check does not admit AWAITING_APPROVAL and CANCELLED';
+  end if;
+
   -- 1. Every table in `public` must have row level security enabled.
   select string_agg(tablename, ', ' order by tablename) into missing
     from pg_tables

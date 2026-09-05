@@ -63,8 +63,16 @@ function Task({ task }: { task: TaskRow }) {
         </p>
       )}
 
-      {task.status === 'BLOCKED' && task.detail && (
-        <p className="hint error" style={{ margin: '0.5rem 0 0' }}>{task.detail}</p>
+      {/* How it ended, in the words that were recorded — approved and carried
+          out, approved and stuck, or turned down. Showing only the blocked
+          case left an approved-but-undeliverable task looking like a success. */}
+      {task.detail && task.status !== 'AWAITING_APPROVAL' && (
+        <p
+          className={task.status === 'DONE' ? 'hint' : 'hint error'}
+          style={{ margin: '0.5rem 0 0' }}
+        >
+          {task.detail}
+        </p>
       )}
 
       {task.deliverable && (
@@ -128,7 +136,7 @@ export default async function WorkPage() {
 
       {done.length > 0 && (
         <>
-          <h2 style={{ fontSize: '1rem', margin: '2.5rem 0 0.75rem' }}>완료</h2>
+          <h2 style={{ fontSize: '1rem', margin: '2.5rem 0 0.75rem' }}>마무리</h2>
           {done.map((t) => <Task key={t.id} task={t} />)}
         </>
       )}

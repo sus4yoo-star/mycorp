@@ -4,3 +4,4 @@ export * from './resolver';
 export * from './oauth';
 export * from './adapters/gmail';
 export * from './adapters/instagram';
+export * from './handover';
