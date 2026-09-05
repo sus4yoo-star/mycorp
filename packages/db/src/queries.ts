@@ -1068,6 +1068,40 @@ export async function resolveBlockedTask(
   return unwrap(res, 'closing the blocked task');
 }
 
+/**
+ * What the company actually did since a given moment.
+ *
+ * The morning briefing used to pass zeroes here, which was honest when no work
+ * existed and became an under-report the moment it did: a founder was never
+ * told about work their company finished while they slept.
+ *
+ * `agents` counts the staff who finished something, not the roster. "직원 5명이
+ * 1건 완료했습니다" would be true and still misleading.
+ */
+export async function countRecentWork(
+  db: Db,
+  companyId: string,
+  sinceIso: string,
+): Promise<{ readonly completed: number; readonly agents: number; readonly blocked: number }> {
+  const res = await db
+    .from('tasks')
+    .select('status, agent_id, owner_kind')
+    .eq('company_id', companyId)
+    .eq('owner_kind', 'AGENT')
+    .in('status', ['DONE', 'BLOCKED'])
+    .gte('updated_at', sinceIso);
+
+  const rows = unwrap(res, 'counting recent work');
+  const done = rows.filter((r) => r.status === 'DONE');
+  const workers = new Set(done.map((r) => r.agent_id).filter((id): id is string => id !== null));
+
+  return {
+    completed: done.length,
+    agents: workers.size,
+    blocked: rows.filter((r) => r.status === 'BLOCKED').length,
+  };
+}
+
 /** Everything still in flight, newest first. */
 export async function listOpenTasks(db: Db, companyId: string): Promise<readonly TaskRow[]> {
   const res = await db

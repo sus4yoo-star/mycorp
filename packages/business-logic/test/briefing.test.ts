@@ -74,6 +74,29 @@ describe('composeMorningBriefing — spec §194', () => {
     expect(first.text).toContain('홈페이지 개편과 광고 캠페인');
   });
 
+  it('reports work that got stuck, with or without work that did not', () => {
+    // A briefing that only ever mentions successes teaches the founder that the
+    // successes are not to be trusted either.
+    const stuck = text(composeMorningBriefing({ ...base, blockedWork: 2 }));
+    expect(stuck).toMatch(/2건/);
+    expect(stuck).toMatch(/멈춰|업무 화면/);
+
+    const both = text(
+      composeMorningBriefing({
+        ...base,
+        agentTasksCompleted: 5,
+        activeAgents: 2,
+        blockedWork: 1,
+      }),
+    );
+    expect(both).toMatch(/5건/);
+    expect(both).toMatch(/1건은 진행하지 못하고/);
+
+    // Nothing stuck, nothing said.
+    expect(text(composeMorningBriefing({ ...base, blockedWork: 0 }))).not.toMatch(/멈춰/);
+    expect(text(composeMorningBriefing(base))).not.toMatch(/멈춰/);
+  });
+
   it('reports overnight work when there was any, and stays silent otherwise', () => {
     expect(
       text(composeMorningBriefing({ ...base, agentTasksCompleted: 67, activeAgents: 31 })),

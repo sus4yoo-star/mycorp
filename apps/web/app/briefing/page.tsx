@@ -10,6 +10,7 @@ import {
 } from '@mycorp24/business-logic';
 import {
   closeFounderTask,
+  countRecentWork,
   decideProposal,
   getCurrentCompany,
   listCompetitors,
@@ -79,12 +80,16 @@ export default async function Briefing() {
   const current = await getCurrentCompany(db, user.id);
   if (!current) redirect('/onboarding');
 
-  const [approvals, founderTasks, signals, competitors, proposals] = await Promise.all([
+  // "밤사이" means the last day, measured rather than assumed.
+  const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+
+  const [approvals, founderTasks, signals, competitors, proposals, work] = await Promise.all([
     listPendingApprovals(db, current.companyId),
     listOpenFounderTasks(db, current.companyId),
     listUnreportedSignals(db, current.companyId),
     listCompetitors(db, current.companyId),
     listOpenProposals(db, current.companyId),
+    countRecentWork(db, current.companyId, since),
   ]);
 
   const competitorName = new Map(competitors.map((c) => [c.id, c.name]));
@@ -122,8 +127,11 @@ export default async function Briefing() {
     founder: current.founder,
     pendingApprovals: approvals.length,
     founderDecisions: decisions,
-    agentTasksCompleted: 0,
-    activeAgents: 0,
+    // Real counts. Zeroes were honest while nothing could do work; now they
+    // would hide work the company actually finished overnight.
+    agentTasksCompleted: work.completed,
+    activeAgents: work.agents,
+    blockedWork: work.blocked,
     competitorChanges: changes,
     proposals: proposalSummaries,
     momentum,

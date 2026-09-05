@@ -46,6 +46,12 @@ export interface BriefingInput {
   readonly founderDecisions: readonly FounderDecision[];
   readonly agentTasksCompleted: number;
   readonly activeAgents: number;
+  /**
+   * Work the company started and could not finish. Reported right after what
+   * it did finish, because a founder who is only ever told about successes
+   * learns to distrust the whole briefing (§151).
+   */
+  readonly blockedWork?: number;
   readonly competitorChanges: readonly CompetitorChange[];
   readonly proposals: readonly ProposalSummary[];
   readonly momentum?: Momentum;
@@ -69,6 +75,7 @@ interface Phrases {
   readonly decisionItem: (d: FounderDecision) => string;
   readonly approvalsWaiting: (n: number) => string;
   readonly overnightWork: (tasks: number, agents: number) => string;
+  readonly blockedWork: (n: number) => string;
   readonly oneCompetitor: (c: CompetitorChange) => string;
   readonly manyCompetitors: (first: CompetitorChange, total: number) => string;
   readonly proposal: (p: ProposalSummary) => string;
@@ -94,6 +101,7 @@ const KO: Phrases = {
     agents > 0
       ? `밤사이 AI 직원 ${agents}명이 ${tasks}건의 업무를 완료했습니다.`
       : `밤사이 ${tasks}건의 업무가 완료되었습니다.`,
+  blockedWork: (n) => `${n}건은 진행하지 못하고 멈춰 있습니다. 업무 화면에 이유가 있습니다.`,
   oneCompetitor: (c) => `${c.competitor}에서 변화가 감지되었습니다. ${c.summary}`,
   manyCompetitors: (first, total) =>
     `경쟁사 ${total}곳에서 주목할 변화가 감지되었습니다. ${first.summary} 외 ${total - 1}건.`,
@@ -122,6 +130,8 @@ const EN: Phrases = {
     agents > 0
       ? `Overnight, ${agents} of your AI staff completed ${tasks} tasks.`
       : `${tasks} tasks were completed overnight.`,
+  blockedWork: (n) =>
+    `${n} ${n === 1 ? 'task is' : 'tasks are'} stuck. The reason is on the work screen.`,
   oneCompetitor: (c) => `${c.competitor} made a move. ${c.summary}`,
   manyCompetitors: (first, total) =>
     `${total} competitors made notable moves. ${first.summary}, and ${total - 1} more.`,
@@ -166,6 +176,12 @@ export function composeMorningBriefing(input: BriefingInput): BriefingLine[] {
       kind: 'WORK',
       text: p.overnightWork(input.agentTasksCompleted, input.activeAgents),
     });
+  }
+
+  // 2b. And what it could not do. This line is not conditional on there being
+  //     good news to soften: stuck work is the founder's to unstick.
+  if ((input.blockedWork ?? 0) > 0) {
+    lines.push({ kind: 'WORK', text: p.blockedWork(input.blockedWork!) });
   }
 
   // 3. Competitors — only what actually matters.
