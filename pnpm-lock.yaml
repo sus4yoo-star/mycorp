@@ -195,6 +195,9 @@ importers:
         specifier: workspace:*
         version: link:../types
     devDependencies:
+      '@mycorp24/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0

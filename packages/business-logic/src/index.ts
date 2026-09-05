@@ -5,3 +5,4 @@ export * from './address';
 export * from './classification';
 export * from './momentum';
 export * from './briefing';
+export * from './staffing';

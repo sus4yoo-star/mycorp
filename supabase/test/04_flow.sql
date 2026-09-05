@@ -98,4 +98,43 @@ begin;
   end $$;
 rollback;
 
+-- A founder can hire into their own company, and only their own. The roster
+-- itself lives in TypeScript (packages/business-logic/src/staffing.ts); what
+-- has to hold here is that the policy lets the founder write it and stops
+-- anyone else, because a company with no staff reports "0명 업무 중" to someone
+-- who was promised an organisation.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare hired int;
+  begin
+    insert into agents (company_id, display_name, division_key, reports_to, skills, clearance)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '리뷰 응대 담당',
+            'CUSTOMER_EXPERIENCE', 'COO', array['READ_REVIEWS','RESPOND_REVIEW'], 'INTERNAL');
+    select count(*) into hired from agents
+     where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    assert hired >= 1, 'the founder could not staff their own company';
+  end $$;
+
+  -- Someone outside the company must not be able to place staff inside it.
+  set local request.jwt.claims = '{"sub":"55555555-5555-5555-5555-555555555555"}';
+  do $$
+  begin
+    insert into agents (company_id, display_name, division_key)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '잠입 담당', 'MARKETING');
+    raise exception 'TEST FAILED: an outsider hired into another company';
+  exception when insufficient_privilege then null;
+  end $$;
+
+  -- And must not be able to read who works there.
+  do $$
+  declare seen int;
+  begin
+    select count(*) into seen from agents
+     where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    assert seen = 0, 'TEST FAILED: an outsider read another company''s roster';
+  end $$;
+rollback;
+
 \echo 'FLOW: all checks passed'

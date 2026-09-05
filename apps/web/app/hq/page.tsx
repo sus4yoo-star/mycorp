@@ -9,7 +9,14 @@ import {
   sortTopDown,
   type IndustryPreset,
 } from '@mycorp24/business-logic';
-import { getCurrentCompany, listDivisions, listPendingApprovals } from '@mycorp24/db';
+import {
+  getCurrentCompany,
+  listAgents,
+  listDivisions,
+  listPendingApprovals,
+  staffCompany,
+  type AgentRow,
+} from '@mycorp24/db';
 import { getServerClient, getSessionUser } from '../../lib/supabase/server';
 import { isSupabaseConfigured } from '../../lib/supabase/config';
 
@@ -35,7 +42,19 @@ interface View {
   readonly divisions: Division[];
   readonly subtitle: string;
   readonly live: boolean;
+  /** Staff by division. Empty for the preview: a preview has no employees. */
+  readonly staff: ReadonlyMap<string, readonly AgentRow[]>;
 }
+
+const byDivision = (agents: readonly AgentRow[]): ReadonlyMap<string, readonly AgentRow[]> => {
+  const map = new Map<string, AgentRow[]>();
+  for (const a of agents) {
+    const list = map.get(a.division_key) ?? [];
+    list.push(a);
+    map.set(a.division_key, list);
+  }
+  return map;
+};
 
 async function load(preset: IndustryPreset): Promise<View> {
   if (isSupabaseConfigured()) {
@@ -48,15 +67,26 @@ async function load(preset: IndustryPreset): Promise<View> {
           listDivisions(db, current.companyId),
           listPendingApprovals(db, current.companyId),
         ]);
+
+        // Companies founded before there was a roster have floors and nobody in
+        // them, and the roster grows as the product does. This is idempotent —
+        // it hires only what is missing — so the organisation on screen is the
+        // one the company is entitled to rather than the one it happened to get
+        // on the day it was founded.
+        await staffCompany(db, current.companyId, divisions);
+        const agents = await listAgents(db, current.companyId);
+
         const addr = formatAddress(current.founder);
+        const waiting =
+          pending.length > 0
+            ? `결재 대기 ${pending.length}건`
+            : '결재 대기 없음';
         return {
           title: current.companyName,
           divisions,
-          subtitle:
-            pending.length > 0
-              ? `${addr}, 결재 대기 ${pending.length}건입니다.`
-              : `${addr}, 결재 대기 중인 안건은 없습니다.`,
+          subtitle: `${addr}, 직원 ${agents.length}명 · ${waiting}입니다.`,
           live: true,
+          staff: byDivision(agents),
         };
       }
     }
@@ -68,6 +98,7 @@ async function load(preset: IndustryPreset): Promise<View> {
     divisions: [...p.divisions],
     subtitle: `${p.ko} · 임원 ${p.executives.length}명`,
     live: false,
+    staff: new Map(),
   };
 }
 
@@ -109,6 +140,7 @@ export default async function HQ({
             <th>층</th>
             <th>Division</th>
             <th>부서</th>
+            {view.live && <th>담당</th>}
           </tr>
         </thead>
         <tbody>
@@ -117,6 +149,14 @@ export default async function HQ({
               <td className="num">{formatFloor(f)}</td>
               <td>{f.divisions.map((d) => d.en).join(' · ')}</td>
               <td className="ko">{f.divisions.map((d) => d.ko).join(' · ')}</td>
+              {view.live && (
+                <td className="ko">
+                  {f.divisions
+                    .flatMap((d) => view.staff.get(d.key) ?? [])
+                    .map((a) => a.display_name)
+                    .join(' · ') || '—'}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

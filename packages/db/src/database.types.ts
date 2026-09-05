@@ -54,6 +54,18 @@ export type DivisionRow = {
   created_at: string;
 };
 
+export type AgentRow = {
+  id: string;
+  company_id: string;
+  display_name: string;
+  division_key: string;
+  reports_to: string | null;
+  skills: string[];
+  clearance: SecurityLevelRow;
+  active: boolean;
+  created_at: string;
+};
+
 export type ExecutiveRow = {
   id: string;
   company_id: string;
@@ -277,6 +289,10 @@ export type Database = {
       >;
       divisions: Table<DivisionRow, Pick<DivisionRow, 'company_id' | 'division_key'> & Partial<DivisionRow>>;
       executives: Table<ExecutiveRow, Pick<ExecutiveRow, 'company_id' | 'role'> & Partial<ExecutiveRow>>;
+      agents: Table<
+        AgentRow,
+        Pick<AgentRow, 'company_id' | 'display_name' | 'division_key'> & Partial<AgentRow>
+      >;
       approvals: Table<
         ApprovalRow,
         Pick<ApprovalRow, 'company_id' | 'action' | 'title' | 'summary'> & Partial<ApprovalRow>

@@ -9,7 +9,7 @@ import {
   type RouterResult,
 } from '@mycorp24/chat';
 import { createAiProvider } from '@mycorp24/ai-gateway';
-import { getCurrentCompany, listPendingApprovals } from '@mycorp24/db';
+import { getCurrentCompany, listAgents, listPendingApprovals } from '@mycorp24/db';
 import { getServerClient, getSessionUser } from '../../../lib/supabase/server';
 import { isSupabaseConfigured } from '../../../lib/supabase/config';
 
@@ -54,7 +54,10 @@ type Db = Awaited<ReturnType<typeof getServerClient>>;
 type Current = NonNullable<Awaited<ReturnType<typeof getCurrentCompany>>>;
 
 async function liveContext(db: Db, current: Current): Promise<RouterContext> {
-  const pending = await listPendingApprovals(db, current.companyId);
+  const [pending, agents] = await Promise.all([
+    listPendingApprovals(db, current.companyId),
+    listAgents(db, current.companyId),
+  ]);
 
   return {
     founder: current.founder,
@@ -67,7 +70,10 @@ async function liveContext(db: Db, current: Current): Promise<RouterContext> {
       ...(a.amount !== null ? { amount: Number(a.amount) } : {}),
       ...(a.currency !== null ? { currency: a.currency } : {}),
     })),
-    workingAgentCount: 0,
+    // The real roster. This read 0 before anyone was ever hired, so the chief
+    // of staff told a founder their AI company had nobody in it — which was
+    // true, and was the bug.
+    workingAgentCount: agents.length,
   };
 }
 

@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FounderIdentity } from '@mycorp24/types';
 import type { Division, ExecutiveRole } from '@mycorp24/agent-types';
-import { resolvePreset, type IndustryPreset } from '@mycorp24/business-logic';
-import type { ApprovalRow, Database, MembershipRoleRow } from './database.types';
+import { resolvePreset, staffFor, type IndustryPreset } from '@mycorp24/business-logic';
+import type { AgentRow, ApprovalRow, Database, MembershipRoleRow } from './database.types';
 
 /**
  * Data access.
@@ -176,7 +176,61 @@ export async function foundCompany(db: Db, input: FoundCompanyInput): Promise<st
   const policyRes = await db.from('approval_policies').insert(DEFAULT_POLICIES(companyId));
   if (policyRes.error) throw new DbError('seeding the approval policy', policyRes.error);
 
+  await staffCompany(db, companyId, preset.divisions);
+
   return companyId;
+}
+
+/**
+ * Put staff in the divisions the company has — spec §132, §214.
+ *
+ * Idempotent by name and division, so it can be run again on a company founded
+ * before there was a roster, and run twice without hiring anybody twice. It is
+ * separate from founding for that reason: a company with floors and no staff is
+ * a state that already exists in the wild and has to be repairable.
+ */
+export async function staffCompany(
+  db: Db,
+  companyId: string,
+  divisions: readonly Division[],
+): Promise<number> {
+  const wanted = staffFor(divisions);
+  if (wanted.length === 0) return 0;
+
+  const { data: existing, error } = await db
+    .from('agents')
+    .select('display_name, division_key')
+    .eq('company_id', companyId);
+  if (error) throw new DbError('reading the roster', error);
+
+  const already = new Set((existing ?? []).map((a) => `${a.division_key}:${a.display_name}`));
+  const missing = wanted.filter((a) => !already.has(`${a.division}:${a.displayName}`));
+  if (missing.length === 0) return 0;
+
+  const res = await db.from('agents').insert(
+    missing.map((a) => ({
+      company_id: companyId,
+      display_name: a.displayName,
+      division_key: a.division,
+      reports_to: a.reportsTo,
+      skills: [...a.skills],
+      clearance: a.clearance,
+    })),
+  );
+  if (res.error) throw new DbError('hiring the staff', res.error);
+  return missing.length;
+}
+
+/** The company's staff, top division first. */
+export async function listAgents(db: Db, companyId: string): Promise<readonly AgentRow[]> {
+  const res = await db
+    .from('agents')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('active', true)
+    .order('division_key', { ascending: true })
+    .order('display_name', { ascending: true });
+  return unwrap(res, 'reading the roster');
 }
 
 /**
