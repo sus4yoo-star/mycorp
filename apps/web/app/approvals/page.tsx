@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { formatAddress } from '@mycorp24/business-logic';
@@ -44,7 +45,7 @@ async function decide(formData: FormData) {
   // The decision is not the end of it. Work that waited on this approval is
   // closed out now — carried out if it can be, and told plainly why not if it
   // cannot. Leaving it in 결재 대기 would read as the company losing the work.
-  await settleApproval(db, {
+  const settlement = await settleApproval(db, {
     companyId: current.companyId,
     userId: user.id,
     approval,
@@ -54,9 +55,27 @@ async function decide(formData: FormData) {
 
   revalidatePath('/approvals');
   revalidatePath('/work');
+
+  // Say what the decision actually caused. Without this the item simply
+  // disappears from the room, which is the same silence the settlement above
+  // exists to remove — one screen higher up.
+  redirect(`/approvals?settled=${settlement.kind}`);
 }
 
-export default async function Approvals() {
+/** What each ending means, in the founder's words. */
+const SETTLED_KO: Record<string, string> = {
+  EXECUTED: '승인하신 대로 처리했습니다. 업무 화면에서 확인하실 수 있습니다.',
+  CANNOT_EXECUTE:
+    '승인은 기록했습니다. 다만 회사가 대신 실행하지 못했습니다 — 업무 화면에 이유가 적혀 있습니다.',
+  CANCELLED: '반려하셨습니다. 해당 업무는 취소했습니다.',
+  NO_TASK: '결재를 처리했습니다.',
+};
+
+export default async function Approvals({
+  searchParams,
+}: {
+  searchParams: Promise<{ settled?: string }>;
+}) {
   if (!isSupabaseConfigured()) return <SetupNotice what="결재실" />;
 
   const user = await getSessionUser();
@@ -67,6 +86,7 @@ export default async function Approvals() {
   if (!current) redirect('/onboarding');
 
   const pending = await listPendingApprovals(db, current.companyId);
+  const settled = SETTLED_KO[(await searchParams).settled ?? ''];
   const addr = formatAddress(current.founder);
   const isFounder = current.role === 'FOUNDER';
 
@@ -76,6 +96,12 @@ export default async function Approvals() {
       <p className="rule-line" style={{ margin: '0 0 1.75rem' }}>
         AI prepares. &nbsp;Founder approves. &nbsp;Company executes.
       </p>
+
+      {settled && (
+        <p className="hint" style={{ margin: '0 0 1.25rem' }}>
+          {settled} <Link href="/work">업무 보기</Link>
+        </p>
+      )}
 
       {pending.length === 0 ? (
         <p style={{ color: 'var(--ink-soft)' }}>

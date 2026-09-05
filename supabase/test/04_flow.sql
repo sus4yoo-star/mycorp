@@ -255,4 +255,48 @@ begin;
   end $$;
 rollback;
 
+-- The founder disposes of work the company could not finish.
+--
+-- A blocked task has no deliverable to show, so the only honest way it reaches
+-- DONE is by becoming the founder's own — which is exactly what happened when
+-- they say "제가 직접 처리했습니다".
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  declare t uuid;
+  begin
+    insert into tasks (company_id, title, instruction, status, detail)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '리뷰 답글', '올려줘',
+            'BLOCKED', '연결이 없습니다.')
+    returning id into t;
+
+    -- Still company work, still nothing produced: the table must refuse.
+    begin
+      update tasks set status = 'DONE' where id = t;
+      raise exception 'TEST FAILED: blocked work was completed with nothing to show';
+    exception when check_violation then null;
+    end;
+
+    update tasks set status = 'DONE', owner_kind = 'FOUNDER',
+                     detail = '회장님이 직접 처리하셨습니다.'
+     where id = t and status = 'BLOCKED';
+    assert (select status from tasks where id = t) = 'DONE',
+      'the founder could not close work they handled themselves';
+  end $$;
+
+  -- Dropping it needs no deliverable either way.
+  do $$
+  declare t uuid;
+  begin
+    insert into tasks (company_id, title, instruction, status)
+    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '접을 일', '해줘', 'BLOCKED')
+    returning id into t;
+    update tasks set status = 'CANCELLED', detail = '회장님이 접으셨습니다.'
+     where id = t and status = 'BLOCKED';
+    assert (select status from tasks where id = t) = 'CANCELLED',
+      'the founder could not drop work the company was stuck on';
+  end $$;
+rollback;
+
 \echo 'FLOW: all checks passed'

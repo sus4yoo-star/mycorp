@@ -1030,6 +1030,44 @@ export async function settleTask(
   return unwrap(res, 'closing the task');
 }
 
+/**
+ * The founder disposes of work the company could not finish.
+ *
+ * A BLOCKED task had no way out. It sat in 진행 중 forever, inflating the count
+ * of what is supposedly in hand — the same lie in the other direction. Either
+ * the founder did it themselves, or they are dropping it; both are endings, and
+ * both are theirs to declare.
+ *
+ * Handled work is marked FOUNDER-owned because that is who did it. It also
+ * satisfies the deliverable constraint honestly: there is no company output to
+ * show, and claiming one would be the invention we are avoiding.
+ */
+export async function resolveBlockedTask(
+  db: Db,
+  input: {
+    readonly taskId: string;
+    readonly companyId: string;
+    readonly outcome: 'HANDLED' | 'DROPPED';
+    readonly detail: string;
+  },
+): Promise<TaskRow> {
+  const handled = input.outcome === 'HANDLED';
+  const res = await db
+    .from('tasks')
+    .update({
+      status: handled ? ('DONE' as const) : ('CANCELLED' as const),
+      ...(handled ? { owner_kind: 'FOUNDER' as const } : {}),
+      detail: input.detail,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.taskId)
+    .eq('company_id', input.companyId)
+    .eq('status', 'BLOCKED')
+    .select('*')
+    .single();
+  return unwrap(res, 'closing the blocked task');
+}
+
 /** Everything still in flight, newest first. */
 export async function listOpenTasks(db: Db, companyId: string): Promise<readonly TaskRow[]> {
   const res = await db

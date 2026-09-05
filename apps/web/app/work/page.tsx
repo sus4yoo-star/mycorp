@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { revalidatePath } from 'next/cache';
 import { divisionMeta, type Division } from '@mycorp24/agent-types';
 import { formatAddress } from '@mycorp24/business-logic';
 import {
+  appendAuditEvent,
   getCurrentCompany,
   listFinishedTasks,
   listOpenTasks,
+  resolveBlockedTask,
   type TaskRow,
 } from '@mycorp24/db';
 import { getServerClient, getSessionUser } from '../../lib/supabase/server';
@@ -49,6 +52,45 @@ const when = (iso: string): string =>
     minute: '2-digit',
   });
 
+/**
+ * The founder disposes of work the company could not finish.
+ *
+ * Without this a blocked task stays in 진행 중 for good and the count on this
+ * page slowly stops meaning anything. Both endings are the founder's to
+ * declare, and both are recorded — including "제가 했습니다", which is a fact
+ * the company should know about its own founder's day (§209).
+ */
+async function resolve(formData: FormData) {
+  'use server';
+
+  const user = await getSessionUser();
+  if (!user) return;
+
+  const taskId = String(formData.get('taskId') ?? '');
+  const outcome = String(formData.get('outcome') ?? '') === 'HANDLED' ? 'HANDLED' : 'DROPPED';
+
+  const db = await getServerClient();
+  const current = await getCurrentCompany(db, user.id);
+  if (!current) return;
+
+  await resolveBlockedTask(db, {
+    taskId,
+    companyId: current.companyId,
+    outcome,
+    detail: outcome === 'HANDLED' ? '회장님이 직접 처리하셨습니다.' : '회장님이 접으셨습니다.',
+  });
+
+  await appendAuditEvent(db, {
+    companyId: current.companyId,
+    actor: user.id,
+    action: `WORK:FOUNDER:${outcome}`,
+    outcome: outcome === 'HANDLED' ? 'EXECUTED' : 'DENIED',
+    reason: taskId,
+  });
+
+  revalidatePath('/work');
+}
+
 function Task({ task }: { task: TaskRow }) {
   return (
     <div className="card" style={{ marginBottom: '0.75rem' }}>
@@ -86,6 +128,18 @@ function Task({ task }: { task: TaskRow }) {
         >
           {task.deliverable}
         </pre>
+      )}
+
+      {task.status === 'BLOCKED' && (
+        <form action={resolve} className="decision" style={{ marginTop: '0.75rem' }}>
+          <input type="hidden" name="taskId" value={task.id} />
+          <button type="submit" name="outcome" value="HANDLED" className="ghost">
+            제가 직접 처리했습니다
+          </button>
+          <button type="submit" name="outcome" value="DROPPED" className="ghost">
+            이 건은 접겠습니다
+          </button>
+        </form>
       )}
 
       {task.status === 'AWAITING_APPROVAL' && (
