@@ -2,8 +2,11 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import {
+  composeEveningBriefing,
   composeMorningBriefing,
   computeMomentum,
+  isSeoulEvening,
+  seoulDayStart,
   type CompetitorChange,
   type FounderDecision,
   type ProposalSummary,
@@ -16,6 +19,7 @@ import {
   listCompetitors,
   listOpenFounderTasks,
   listOpenProposals,
+  listOpenTasks,
   listPendingApprovals,
   listUnreportedSignals,
 } from '@mycorp24/db';
@@ -37,6 +41,15 @@ import SetupNotice from '../../components/SetupNotice';
 
 const dayssince = (iso: string): number =>
   Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
+
+/**
+ * Morning or evening — decided by the clock, overridable by the founder.
+ *
+ * §195: the evening report is shorter because the founder is done for the day.
+ * It was written and tested months ago and never rendered anywhere, so
+ * "YOU CLOCK OUT. WE DON'T." was a claim with no screen behind it. The clock
+ * itself lives in business-logic, where it can be tested.
+ */
 
 async function closeTask(formData: FormData) {
   'use server';
@@ -70,8 +83,12 @@ async function decide(formData: FormData) {
   revalidatePath('/briefing');
 }
 
-export default async function Briefing() {
-  if (!isSupabaseConfigured()) return <SetupNotice what="아침 보고" />;
+export default async function Briefing({
+  searchParams,
+}: {
+  searchParams: Promise<{ when?: string }>;
+}) {
+  if (!isSupabaseConfigured()) return <SetupNotice what="보고" />;
 
   const user = await getSessionUser();
   if (!user) redirect('/login?next=/briefing');
@@ -83,14 +100,21 @@ export default async function Briefing() {
   // "밤사이" means the last day, measured rather than assumed.
   const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
 
-  const [approvals, founderTasks, signals, competitors, proposals, work] = await Promise.all([
+  const [approvals, founderTasks, signals, competitors, proposals, work, today, open] =
+    await Promise.all([
     listPendingApprovals(db, current.companyId),
     listOpenFounderTasks(db, current.companyId),
     listUnreportedSignals(db, current.companyId),
     listCompetitors(db, current.companyId),
     listOpenProposals(db, current.companyId),
     countRecentWork(db, current.companyId, since),
+    countRecentWork(db, current.companyId, seoulDayStart().toISOString()),
+    listOpenTasks(db, current.companyId),
   ]);
+
+  // The one problem worth naming in an evening report: work that stopped and
+  // said why. Newest first, because that is the one still fresh.
+  const stuck = open.find((t) => t.status === 'BLOCKED' && t.detail);
 
   const competitorName = new Map(competitors.map((c) => [c.id, c.name]));
 
@@ -123,25 +147,49 @@ export default async function Briefing() {
     ),
   });
 
-  const lines = composeMorningBriefing({
-    founder: current.founder,
-    pendingApprovals: approvals.length,
-    founderDecisions: decisions,
-    // Real counts. Zeroes were honest while nothing could do work; now they
-    // would hide work the company actually finished overnight.
-    agentTasksCompleted: work.completed,
-    activeAgents: work.agents,
-    blockedWork: work.blocked,
-    competitorChanges: changes,
-    proposals: proposalSummaries,
-    momentum,
-  });
+  const asked = (await searchParams).when;
+  const evening = asked === 'evening' || (asked !== 'morning' && isSeoulEvening());
+
+  const lines = evening
+    ? composeEveningBriefing({
+        founder: current.founder,
+        // Today's work, counted from midnight in Seoul rather than from a
+        // rolling 24 hours: "오늘" has to mean the founder's today.
+        completed: today.completed,
+        // Still open and not started today. Old work that is still open is the
+        // thing an evening report exists to surface.
+        delayed: open.filter((t) => Date.parse(t.created_at) < seoulDayStart().getTime()).length,
+        // The problem is quoted from the work itself. Nothing here is inferred:
+        // if no task recorded a reason, the report says nothing about problems.
+        ...(stuck?.detail ? { problem: stuck.detail } : {}),
+        founderTodo: founderTasks.length + approvals.length,
+      })
+    : composeMorningBriefing({
+        founder: current.founder,
+        pendingApprovals: approvals.length,
+        founderDecisions: decisions,
+        // Real counts. Zeroes were honest while nothing could do work; now they
+        // would hide work the company actually finished overnight.
+        agentTasksCompleted: work.completed,
+        activeAgents: work.agents,
+        blockedWork: work.blocked,
+        competitorChanges: changes,
+        proposals: proposalSummaries,
+        momentum,
+      });
 
   return (
     <main className="wrap" style={{ paddingBlock: '2.5rem' }}>
       <h1 style={{ fontSize: '1.6rem', margin: '0 0 0.35rem' }}>{current.companyName}</h1>
       <p className="rule-line" style={{ margin: '0 0 1.75rem' }}>
         AI prepares. &nbsp;Founder approves. &nbsp;Company executes.
+      </p>
+
+      <p style={{ margin: '0 0 1.25rem', fontSize: '0.87rem' }}>
+        <strong>{evening ? '오늘 업무 보고' : '아침 보고'}</strong>{' '}
+        <Link href={evening ? '/briefing?when=morning' : '/briefing?when=evening'}>
+          {evening ? '아침 보고 보기' : '오늘 업무 보고 보기'}
+        </Link>
       </p>
 
       <section className="brief">
