@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { asAgentId, asCompanyId } from '@mycorp24/types';
-import { handoverFor, providersForCapability } from '@mycorp24/integrations';
+import { planHandover } from '@mycorp24/integrations';
 import {
   appendAuditEvent,
   listConnections,
@@ -85,60 +85,42 @@ async function attempt(
   db: Db,
   input: { readonly companyId: string; readonly userId: string; readonly approval: ApprovalRow },
 ): Promise<Attempt> {
-  const action = input.approval.action;
-  const handover = handoverFor(action as never);
-
-  if (!handover) {
-    return {
-      kind: 'CANNOT',
-      detail:
-        '승인은 기록되었습니다. 다만 이 건은 회사가 대신 실행할 수 있는 종류가 아니어서, 실행은 회장님이 직접 하셔야 합니다.',
-    };
-  }
-
-  const candidates = providersForCapability(handover.capability);
-  if (candidates.length === 0) {
-    return {
-      kind: 'CANNOT',
-      detail: `승인은 기록되었습니다. 다만 ${handover.what}을(를) 대신 할 수 있는 연결이 아직 없습니다. 초안 그대로 회장님이 올려주셔야 합니다.`,
-    };
-  }
-
   const connections = await listConnections(db, input.companyId);
-  const connected = candidates.filter((c) =>
-    connections.some((row) => row.catalog_id === c.id),
+  const plan = planHandover(
+    input.approval.action as never,
+    connections.map((row) => row.catalog_id),
   );
 
-  if (connected.length === 0) {
-    const names = candidates.map((c) => c.displayName).join(', ');
-    return {
-      kind: 'CANNOT',
-      detail: `승인은 기록되었습니다. 다만 ${handover.what}을(를) 하려면 ${names} 연결이 필요합니다. 연결실에서 연결해 주시면 바로 실행합니다.`,
-    };
-  }
+  // Everything short of READY already carries the sentence the founder reads.
+  // The rules behind it are tested in packages/integrations; this file only
+  // supplies what the company has actually connected.
+  if (plan.kind !== 'READY') return { kind: 'CANNOT', detail: plan.reason };
 
   // The gateway is still the only way out of the building. The approval id is
   // passed through so the ASK policy is satisfied by this decision rather than
   // raising a second approval for the same work (§112).
-  const target = connected[0]!;
+  //
+  // CONFIDENTIAL clearance, higher than a chat-initiated call gets: these
+  // actions touch customers by design, and the founder authorised this exact
+  // one. It is scoped to the single capability the plan named.
   const outcome = await runThroughGateway(
     {
       companyId: asCompanyId(input.companyId),
       agent: asAgentId(input.userId),
-      provider: target.provider,
-      capability: handover.capability as never,
-      action: action as never,
+      provider: plan.target.provider,
+      capability: plan.capability as never,
+      action: input.approval.action as never,
       approvalId: input.approval.id,
       payload: { body: input.approval.summary },
     },
-    { allowedCapabilities: new Set([handover.capability]), clearance: 'CONFIDENTIAL' },
+    { allowedCapabilities: new Set([plan.capability]), clearance: 'CONFIDENTIAL' },
   );
 
   if (outcome.kind === 'EXECUTED') {
     return {
       kind: 'DONE',
-      what: handover.what,
-      detail: `${target.displayName}에 ${handover.what} 완료했습니다.`,
+      what: plan.what,
+      detail: `${plan.target.displayName}에 ${plan.what} 완료했습니다.`,
     };
   }
 
@@ -146,7 +128,7 @@ async function attempt(
     kind: 'CANNOT',
     // Every remaining outcome carries a reason — denied, needing consent, or
     // failed at the adapter. The founder gets that sentence, not "실패".
-    detail: `승인은 기록되었습니다. 다만 ${target.displayName}에서 ${handover.what}이(가) 되지 않았습니다: ${outcome.reason}`,
+    detail: `승인은 기록되었습니다. 다만 ${plan.target.displayName}에서 ${plan.what}이(가) 되지 않았습니다: ${outcome.reason}`,
   };
 }
 

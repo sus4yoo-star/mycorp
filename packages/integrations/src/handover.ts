@@ -46,3 +46,74 @@ export const handoverFor = (action: ExternalAction): Handover | null =>
 export const providersForCapability = (
   capability: Capability,
 ): readonly CatalogEntry[] => MVP_CATALOG.filter((e) => e.capabilities.includes(capability));
+
+/**
+ * How far an approved action can actually get, given what the company has
+ * connected.
+ *
+ * This is the part worth testing and the part that was living in a server-only
+ * file where nothing could reach it. The rule it encodes is the product's most
+ * important one: an approval is a decision, not an outcome, and every ending
+ * short of execution has to say what stopped it (§151).
+ */
+export type HandoverPlan =
+  /** No machine can be asked to do this. The founder does it themselves. */
+  | { readonly kind: 'NO_MACHINE'; readonly reason: string }
+  /** We would know how, but nothing in the catalog can do it yet. */
+  | { readonly kind: 'NO_PROVIDER'; readonly what: string; readonly reason: string }
+  /** Something could do it; this company has not connected it. */
+  | {
+      readonly kind: 'NOT_CONNECTED';
+      readonly what: string;
+      readonly candidates: readonly CatalogEntry[];
+      readonly reason: string;
+    }
+  /** Hand it to the gateway. Still not a claim that it will succeed. */
+  | {
+      readonly kind: 'READY';
+      readonly what: string;
+      readonly capability: Capability;
+      readonly target: CatalogEntry;
+    };
+
+/** Every refusal starts the same way, because the approval really was recorded. */
+const RECORDED = '승인은 기록되었습니다.';
+
+export function planHandover(
+  action: ExternalAction,
+  connectedCatalogIds: readonly string[],
+): HandoverPlan {
+  const handover = handoverFor(action);
+  if (!handover) {
+    return {
+      kind: 'NO_MACHINE',
+      reason: `${RECORDED} 다만 이 건은 회사가 대신 실행할 수 있는 종류가 아니어서, 실행은 회장님이 직접 하셔야 합니다.`,
+    };
+  }
+
+  const candidates = providersForCapability(handover.capability);
+  if (candidates.length === 0) {
+    return {
+      kind: 'NO_PROVIDER',
+      what: handover.what,
+      reason: `${RECORDED} 다만 ${handover.what}을(를) 대신 할 수 있는 연결이 아직 없습니다. 초안 그대로 회장님이 올려주셔야 합니다.`,
+    };
+  }
+
+  const connected = new Set(connectedCatalogIds);
+  const target = candidates.find((c) => connected.has(c.id));
+
+  if (!target) {
+    return {
+      kind: 'NOT_CONNECTED',
+      what: handover.what,
+      candidates,
+      reason:
+        `${RECORDED} 다만 ${handover.what}을(를) 하려면 ` +
+        `${candidates.map((c) => c.displayName).join(', ')} 연결이 필요합니다. ` +
+        '연결실에서 연결해 주시면 바로 실행합니다.',
+    };
+  }
+
+  return { kind: 'READY', what: handover.what, capability: handover.capability, target };
+}
