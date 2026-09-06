@@ -103,14 +103,23 @@ const RULES: readonly Rule[] = [
   { intent: 'SHOW_METRIC', re: /(매출|광고비|예약|팔로워|구독자|revenue|spend).{0,20}(어때|얼마|알려|보여|어떻|how)/i },
 ];
 
+/** Verbs that mean "produce something", not "tell me a number". */
+const WANTS_DOING = /(준비|작성|써|쓰|만들|올려|보내|답변|응대|처리|초안)/;
+
 const classifyDeterministic = (text: string): Classification => {
   const entities = extractEntities(text);
   const mood = readMood(text);
   for (const rule of RULES) {
     if (rule.re.test(text)) return { intent: rule.intent, entities, confidence: 1, mood };
   }
-  // A bare metric mention with no question word still reads as a metric ask.
-  if (entities.metric && /\?|알려|보여|줘/.test(text)) {
+  // A bare metric mention still reads as a metric ask — but only when nothing
+  // in the sentence says the founder wants something *done*.
+  //
+  // "줘" alone used to be enough, and "줘" ends half the orders in Korean. So
+  // "리뷰 답변 준비해줘" — the example this product puts on its own empty work
+  // screen — was read as a request for review statistics and never became work
+  // at all. A doing verb outranks a metric noun every time.
+  if (entities.metric && !WANTS_DOING.test(text) && /\?|알려|보여|얼마|현황/.test(text)) {
     return { intent: 'SHOW_METRIC', entities, confidence: 0.8, mood };
   }
   return { intent: 'UNKNOWN', entities, confidence: 0, mood };
@@ -182,6 +191,23 @@ const ACTION_INTENTS: ReadonlySet<Intent> = new Set<Intent>([
   'CREATE_AUTOMATION',
   'DELEGATE',
 ]);
+
+/**
+ * Does this utterance become work?
+ *
+ * The rule the whole product turns on: only an instruction the router has no
+ * product action for. Two things it must never catch —
+ *
+ *   - a question. "리뷰 답변 어떻게 써?" asks how; opening a task instead
+ *     answers a question by taking the decision away from the founder.
+ *   - anything the router already handles. "결재할 거 있어?" is a question
+ *     about approvals, not an order to draft something.
+ *
+ * It lives here, next to the routing it depends on, because it was written out
+ * inline in the API route where the router's own tests could not reach it.
+ */
+export const becomesWork = (c: Classification): boolean =>
+  c.intent === 'UNKNOWN' && c.mood === 'INSTRUCTION';
 
 interface Explanation {
   readonly reply: string;

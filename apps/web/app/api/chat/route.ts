@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { FounderIdentity } from '@mycorp24/types';
 import {
+  becomesWork,
   buildBrief,
   route as routeUtterance,
   systemPrompt,
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
   // usually work. Only an instruction: a question about how something is done
   // must never start doing it, and only when the router found nothing, so
   // "결재할 거 있어?" stays a question about approvals rather than becoming a task.
-  if (result.classification.intent === 'UNKNOWN' && result.classification.mood === 'INSTRUCTION') {
+  if (becomesWork(result.classification)) {
     const worked = await asWork(db, current, message, ctx);
     if (worked) return NextResponse.json({ ...worked, live: true });
   }

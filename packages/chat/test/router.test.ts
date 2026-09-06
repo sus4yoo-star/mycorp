@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FounderIdentity } from '@mycorp24/types';
 import {
   UI_CHAT_PARITY,
+  becomesWork,
   route,
   routeWithFallback,
   type IntentClassifier,
@@ -200,5 +201,50 @@ describe('model fallback', () => {
     };
     const r = await routeWithFallback('음 그거', ctx(), broken);
     expect(r.nextStep).toEqual({ kind: 'CLARIFY' });
+  });
+});
+
+describe('a metric noun does not outrank a doing verb', () => {
+  const intent = (u: string) => route(u, ctx()).classification.intent;
+
+  it('still answers a real metric ask', () => {
+    expect(intent('매출 얼마야?')).toBe('SHOW_METRIC');
+    expect(intent('팔로워 알려줘')).toBe('SHOW_METRIC');
+    expect(intent('예약 현황 보여줘')).toBe('SHOW_METRIC');
+  });
+
+  it('does not read an order as a request for statistics', () => {
+    // "줘" ends half the orders in Korean, so matching on it alone turned
+    // every instruction mentioning a metric word into a report request.
+    expect(intent('리뷰 답변 준비해줘')).toBe('UNKNOWN');
+    expect(intent('매출 정리한 안내문 써줘')).toBe('UNKNOWN');
+    expect(intent('예약 확인 문자 보내줘')).toBe('UNKNOWN');
+  });
+});
+
+describe('becomesWork', () => {
+  const asks = (utterance: string) => becomesWork(route(utterance, ctx()).classification);
+
+  it('turns a plain instruction into work', () => {
+    expect(asks('리뷰 답변 준비해줘')).toBe(true);
+    expect(asks('이번 주 인스타 게시물 만들어')).toBe(true);
+    expect(asks('단골 고객한테 보낼 안내문 써줘')).toBe(true);
+  });
+
+  it('never turns a question into work', () => {
+    // Answering a question by starting the work takes the decision away from
+    // the founder, and then reports work they never ordered.
+    expect(asks('리뷰 답변은 어떻게 쓰는 게 좋아?')).toBe(false);
+    expect(asks('인스타 게시물 만들려면 뭐가 필요해?')).toBe(false);
+    expect(asks('결재할 거 있어?')).toBe(false);
+  });
+
+  it('leaves anything the router already handles alone', () => {
+    // These have product actions of their own; drafting a document for them
+    // would be a second, invented interpretation of the same sentence.
+    expect(asks('인스타 연결해')).toBe(false);
+    expect(asks('결재 승인해')).toBe(false);
+    expect(asks('광고비 30만원 넘으면 물어봐')).toBe(false);
+    expect(asks('알아서 처리하고 중요한 것만 보고해')).toBe(false);
   });
 });
