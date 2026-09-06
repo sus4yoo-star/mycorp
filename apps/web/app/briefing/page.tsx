@@ -7,6 +7,7 @@ import {
   computeMomentum,
   isSeoulEvening,
   seoulDayStart,
+  withI,
   type CompetitorChange,
   type FounderDecision,
   type ProposalSummary,
@@ -213,7 +214,7 @@ export default async function Briefing({
                 </div>
                 <p style={{ margin: '0.3rem 0 0.6rem', color: 'var(--ink-soft)', fontSize: '0.87rem' }}>
                   {t.why_founder}
-                  {t.blocks ? ` · ${t.blocks}이(가) 함께 지연되고 있습니다.` : ''}
+                  {t.blocks ? ` · ${withI(t.blocks)} 함께 지연되고 있습니다.` : ''}
                 </p>
                 <form action={closeTask} className="decision">
                   <input type="hidden" name="taskId" value={t.id} />

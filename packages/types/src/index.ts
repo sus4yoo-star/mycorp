@@ -230,3 +230,5 @@ export interface AuditEvent {
   readonly integration?: string;
   readonly payloadDigest?: string;
 }
+
+export * from './particle';

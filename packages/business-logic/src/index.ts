@@ -9,3 +9,4 @@ export * from './staffing';
 export * from './work';
 export * from './constitution';
 export * from './clock';
+export * from './particle';

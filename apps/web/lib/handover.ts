@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { asAgentId, asCompanyId } from '@mycorp24/types';
+import { asAgentId, asCompanyId, withI } from '@mycorp24/types';
 import { planHandover } from '@mycorp24/integrations';
 import {
   appendAuditEvent,
@@ -128,7 +128,7 @@ async function attempt(
     kind: 'CANNOT',
     // Every remaining outcome carries a reason — denied, needing consent, or
     // failed at the adapter. The founder gets that sentence, not "실패".
-    detail: `승인은 기록되었습니다. 다만 ${plan.target.displayName}에서 ${plan.what}이(가) 되지 않았습니다: ${outcome.reason}`,
+    detail: `승인은 기록되었습니다. 다만 ${plan.target.displayName}에서 ${withI(plan.what)} 되지 않았습니다: ${outcome.reason}`,
   };
 }
 

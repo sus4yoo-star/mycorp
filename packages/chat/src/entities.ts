@@ -32,6 +32,9 @@ const PERIODS: readonly { re: RegExp; period: Period }[] = [
   { re: /오늘|today/i, period: 'TODAY' },
   { re: /어제|yesterday/i, period: 'YESTERDAY' },
   { re: /이번\s*주|this\s*week/i, period: 'THIS_WEEK' },
+  // Missing entirely, so "지난주 광고비 얼마 썼어?" was answered as "오늘 광고비".
+  // Reporting the wrong period is not a small miss: the founder acts on it.
+  { re: /지난\s*주|저번\s*주|last\s*week/i, period: 'LAST_WEEK' },
   { re: /이번\s*달|this\s*month/i, period: 'THIS_MONTH' },
   { re: /지난\s*달|저번\s*달|last\s*month/i, period: 'LAST_MONTH' },
   { re: /최근|recent/i, period: 'RECENT' },

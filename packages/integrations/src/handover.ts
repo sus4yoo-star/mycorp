@@ -1,4 +1,4 @@
-import type { ExternalAction } from '@mycorp24/types';
+import { withEul, type ExternalAction } from '@mycorp24/types';
 import type { Capability } from './adapter';
 import { MVP_CATALOG, type CatalogEntry } from './catalog';
 
@@ -96,7 +96,7 @@ export function planHandover(
     return {
       kind: 'NO_PROVIDER',
       what: handover.what,
-      reason: `${RECORDED} 다만 ${handover.what}을(를) 대신 할 수 있는 연결이 아직 없습니다. 초안 그대로 회장님이 올려주셔야 합니다.`,
+      reason: `${RECORDED} 다만 ${withEul(handover.what)} 대신 할 수 있는 연결이 아직 없습니다. 초안 그대로 회장님이 올려주셔야 합니다.`,
     };
   }
 
@@ -109,7 +109,7 @@ export function planHandover(
       what: handover.what,
       candidates,
       reason:
-        `${RECORDED} 다만 ${handover.what}을(를) 하려면 ` +
+        `${RECORDED} 다만 ${withEul(handover.what)} 하려면 ` +
         `${candidates.map((c) => c.displayName).join(', ')} 연결이 필요합니다. ` +
         '연결실에서 연결해 주시면 바로 실행합니다.',
     };

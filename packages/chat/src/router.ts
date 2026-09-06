@@ -1,5 +1,5 @@
 import type { FounderIdentity } from '@mycorp24/types';
-import { formatAddress } from '@mycorp24/business-logic';
+import { eul, eun, formatAddress, i } from '@mycorp24/business-logic';
 import { extractEntities } from './entities';
 import { readMood } from './mood';
 import type { Classification, Entities, Intent, IntentClassifier } from './intent';
@@ -88,7 +88,16 @@ interface Rule {
  * "결재 승인해" is a decision, not a request to list approvals.
  */
 const RULES: readonly Rule[] = [
-  { intent: 'DELEGATE', re: /알아서\s*(처리|해|챙|좀)|take\s+care\s+of\s+it/i },
+  // Courtesy first, and only when it is the whole utterance. "고마워" used to
+  // fall through to UNKNOWN + INSTRUCTION and open a task — the company doing
+  // work because it was thanked for some.
+  {
+    intent: 'ACKNOWLEDGE',
+    re: /^\s*(고마워요?|고맙(다|습니다)|감사(합니다|해요)?|수고(했어|하셨어요|요)?|잘\s*했어|좋아요?|알겠(어|다|습니다)|응|어|그래|넵?|오케이|ok(ay)?|ㅇㅋ|ㅇㅇ|땡큐|thanks?|thank\s+you)\s*[.!~ㅎㅋ]*$/i,
+  },
+  // "알아서 잘 해줘" — an adverb between 알아서 and the verb is common and used
+  // to miss the delegation rule entirely.
+  { intent: 'DELEGATE', re: /알아서\s*\S{0,4}\s*(처리|해|챙|좀|맡)|take\s+care\s+of\s+it/i },
   { intent: 'DECIDE_APPROVAL', re: /(승인|approve|반려|거절|reject)/i },
   { intent: 'UPDATE_APPROVAL_POLICY', re: /(넘|초과|이상|over).{0,12}(물어|승인|결재|approval)/i },
   { intent: 'CREATE_AUTOMATION', re: /(매일|매주|매달|매월|every\s+(day|week|month))/i },
@@ -141,6 +150,7 @@ const PERIOD_KO: Record<string, string> = {
   TODAY: '오늘',
   YESTERDAY: '어제',
   THIS_WEEK: '이번 주',
+  LAST_WEEK: '지난주',
   THIS_MONTH: '이번 달',
   LAST_MONTH: '지난달',
   RECENT: '최근',
@@ -232,7 +242,7 @@ function explain(
       const name = e.provider ? providerName(e.provider) : '해당 서비스';
       if (e.provider && ctx.connectedProviders.has(e.provider)) {
         return {
-          reply: `${addr}, ${name}는 이미 연결되어 있습니다. 다시 연결하실 필요는 없습니다.`,
+          reply: `${addr}, ${name}${eun(name)} 이미 연결되어 있습니다. 다시 연결하실 필요는 없습니다.`,
           nextStep: { kind: 'NAVIGATE', route: '/connect' },
           cards: [{ kind: 'CONNECT', provider: e.provider, connected: true }],
         };
@@ -240,7 +250,7 @@ function explain(
       return {
         reply:
           `${addr}, 연결은 '연결' 화면에서 ${name} 계정으로 로그인하시면 끝납니다. ` +
-          `저희가 비밀번호를 보관하지는 않고, ${name}가 발급한 접근 권한만 암호화해서 보관합니다. ` +
+          `저희가 비밀번호를 보관하지는 않고, ${name}${i(name)} 발급한 접근 권한만 암호화해서 보관합니다. ` +
           `지금 연결하시겠으면 "${e.provider ? `${name} 연결해` : '연결해'}"라고 지시해 주십시오.`,
         nextStep: { kind: 'NAVIGATE', route: '/connect' },
         ...(e.provider
@@ -327,7 +337,7 @@ export function respond(
       const connected = ctx.connectedProviders.has(e.provider);
       const name = providerName(e.provider);
       return connected
-        ? done(`${addr}, ${name}는 이미 연결되어 있습니다.`, { kind: 'NONE' }, [
+        ? done(`${addr}, ${name}${eun(name)} 이미 연결되어 있습니다.`, { kind: 'NONE' }, [
             { kind: 'CONNECT', provider: e.provider, connected: true },
           ])
         : done(
@@ -377,11 +387,11 @@ export function respond(
       const needs = REQUIRED_PROVIDER[metric];
       const ready = !needs || ctx.connectedProviders.has(needs);
       return ready
-        ? done(`${addr}, ${label}를 정리해 보고드리겠습니다.`, { kind: 'NONE' }, [
+        ? done(`${addr}, ${label}${eul(label)} 정리해 보고드리겠습니다.`, { kind: 'NONE' }, [
             { kind: 'METRIC', metric, period, ready: true },
           ])
         : done(
-            `${addr}, ${label}를 보려면 ${providerName(needs)} 연결이 필요합니다. 아직 연결되어 있지 않습니다.`,
+            `${addr}, ${label}${eul(label)} 보려면 ${providerName(needs)} 연결이 필요합니다. 아직 연결되어 있지 않습니다.`,
             { kind: 'START_OAUTH', provider: needs },
             [{ kind: 'METRIC', metric, period, ready: false }],
           );
@@ -463,6 +473,11 @@ export function respond(
         `${addr}, 각 본부에 확인하겠습니다. 비용이 발생하거나 외부에 나가는 일은 결재를 요청드리겠습니다.`,
         { kind: 'PLAN_DELEGATED_WORK' },
       );
+
+    case 'ACKNOWLEDGE':
+      // Short, and it does not ask for another order. A chief of staff who
+      // answers "고마워" with "다음 지시는요?" is a chatbot filling silence.
+      return done(`${addr}, 계속하겠습니다.`, { kind: 'NONE' });
 
     case 'UNKNOWN':
     default:

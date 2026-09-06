@@ -20,6 +20,8 @@ export const INTENTS = [
   'CREATE_AUTOMATION',
   'OPEN_ROUTE',
   'DELEGATE',
+  /** "고마워", "알겠어" — courtesy, not an order. Answering it with work is worse than not answering. */
+  'ACKNOWLEDGE',
   'UNKNOWN',
 ] as const;
 
@@ -27,7 +29,14 @@ export type Intent = (typeof INTENTS)[number];
 
 export type Metric = 'REVENUE' | 'AD_SPEND' | 'RESERVATIONS' | 'REVIEWS' | 'FOLLOWERS';
 
-export type Period = 'TODAY' | 'YESTERDAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'LAST_MONTH' | 'RECENT';
+export type Period =
+  | 'TODAY'
+  | 'YESTERDAY'
+  | 'THIS_WEEK'
+  | 'LAST_WEEK'
+  | 'THIS_MONTH'
+  | 'LAST_MONTH'
+  | 'RECENT';
 
 export interface Entities {
   readonly provider?: string;

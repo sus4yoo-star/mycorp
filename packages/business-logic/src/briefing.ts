@@ -1,5 +1,6 @@
 import type { FounderIdentity } from '@mycorp24/types';
 import { formatAddress } from './address';
+import { withEul, withI } from './particle';
 import { momentumSentence, type Momentum } from './momentum';
 
 /**
@@ -93,7 +94,7 @@ const KO: Phrases = {
   decisionCount: (n) => `오늘 직접 결정하셔야 할 일은 ${n}건입니다.`,
   decisionItem: (d) => {
     const stale = d.ageDays !== undefined && d.ageDays >= 3 ? `${d.ageDays}일째 보류 중 — ` : '';
-    const blocks = d.blocks ? ` ${d.blocks}이(가) 함께 지연되고 있습니다.` : '';
+    const blocks = d.blocks ? ` ${withI(d.blocks)} 함께 지연되고 있습니다.` : '';
     return `${stale}${d.title} (약 ${d.estimateMinutes}분).${blocks}`;
   },
   approvalsWaiting: (n) => `결재 대기 ${n}건이 있습니다.`,
@@ -111,7 +112,9 @@ const KO: Phrases = {
     d > 0 ? `${c}건 완료, ${d}건 지연되었습니다.` : `${c}건을 완료했습니다.`,
   highlight: (s) => `가장 좋은 성과: ${s}.`,
   problem: (s) => `문제: ${s}.`,
-  tomorrow: (s) => `내일은 ${s}을(를) 우선하겠습니다.`,
+  // "을(를)" is a form for printed documents that cannot know the word. We do
+  // know it, so the chief of staff writes it out like a person would.
+  tomorrow: (s) => `내일은 ${withEul(s)} 우선하겠습니다.`,
   founderTodo: (n) => `회장님께서 직접 하셔야 할 일이 ${n}건 남아 있습니다.`,
 };
 

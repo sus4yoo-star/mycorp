@@ -28,6 +28,11 @@ const QUESTION_MARKERS: readonly RegExp[] = [
   /가능(한|할)/,
   /방법|절차/,
   /맞(나|아|지)/,
+  // Deliberation. "직원 뽑아야 하나", "메뉴판 새로 만들어야 될 것 같은데",
+  // "가격 좀 올릴까 고민중이야" are the founder thinking aloud. Treating them as
+  // orders opens a task for a decision they have not made.
+  /야\s*(하|되)(나|나요|겠|지)/,
+  /것\s*같은데|듯\s*한데|듯한데|고민(중|이|되)/,
   /\b(how|what|when|where|why|which|who|can i|should i|is it|are there)\b/i,
 ];
 
@@ -36,11 +41,28 @@ const QUESTION_MARKERS: readonly RegExp[] = [
 // intent, not here.
 const IMPERATIVE_TAIL = /(해|하라|해라|해줘|해주세요|시켜|시작해|보내|올려|바꿔|정리해|처리해)\s*[.!]*$/;
 
+/**
+ * "~ㄹ까" — the ending that turns a verb into wondering: 올릴까, 바꿀까, 할까.
+ *
+ * It cannot be written as a plain pattern over the verb stem, because Korean
+ * composes the final ㄹ into the preceding syllable. So the final consonant is
+ * read off the syllable itself, which also keeps 까먹다 and 까지 out.
+ */
+const RIEUL = 8;
+function wonders(text: string): boolean {
+  for (let i = 1; i < text.length; i += 1) {
+    if (text[i] !== '까') continue;
+    const code = text.charCodeAt(i - 1) - 0xac00;
+    if (code >= 0 && code < 11172 && code % 28 === RIEUL) return true;
+  }
+  return false;
+}
+
 export function readMood(utterance: string): Mood {
   const text = utterance.trim();
   if (text.length === 0) return 'INSTRUCTION';
 
-  const asks = QUESTION_MARKERS.some((re) => re.test(text));
+  const asks = wonders(text) || QUESTION_MARKERS.some((re) => re.test(text));
   if (!asks) return 'INSTRUCTION';
 
   // "연결해줘?" is still an instruction typed with a stray mark; a real question

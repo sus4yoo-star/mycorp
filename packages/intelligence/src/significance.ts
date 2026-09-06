@@ -1,3 +1,4 @@
+import { withI } from '@mycorp24/types';
 import type { SnapshotDiff } from './snapshot';
 
 /**
@@ -49,7 +50,7 @@ export function scoreWebsiteChange(
     const significance = percent < 0 ? (Math.abs(percent) >= 15 ? 5 : 4) : 3;
     return {
       kind: 'PRICE_CHANGE',
-      summary: `${competitor}이(가) 최저가를 ${before.toLocaleString('ko-KR')}원에서 ${after.toLocaleString('ko-KR')}원으로 ${Math.abs(percent)}% ${direction}했습니다.`,
+      summary: `${withI(competitor)} 최저가를 ${before.toLocaleString('ko-KR')}원에서 ${after.toLocaleString('ko-KR')}원으로 ${Math.abs(percent)}% ${direction}했습니다.`,
       significance,
       evidence: { before, after, percent },
     };
