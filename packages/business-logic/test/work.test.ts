@@ -102,3 +102,42 @@ describe('breaksDecision — spec §139', () => {
     expect(breaksDecision('가격할인 이벤트', ['여름에는 시즌 메뉴를 늘린다'])).toBeNull();
   });
 });
+
+describe('the instructions a shop owner actually types', () => {
+  const ALL = [
+    'EXECUTIVE_STRATEGY', 'MARKETING', 'SALES', 'FINANCE', 'OPERATIONS',
+    'CUSTOMER_EXPERIENCE', 'DATA', 'CREATIVE', 'LEGAL', 'PEOPLE', 'LOBBY', 'AUDIT_RISK',
+  ] as never;
+  const where = (u: string) => {
+    const a = assignWork(u, ALL);
+    return a.kind === 'ASSIGNED' ? `${a.division}:${a.action ?? '-'}` : a.kind;
+  };
+
+  it('places a message to customers', () => {
+    // Among the most ordinary things asked of a shop, and it used to land
+    // nowhere at all.
+    expect(where('단골한테 감사 문자 돌리자')).toBe('CUSTOMER_EXPERIENCE:SEND_CUSTOMER_MESSAGE');
+    expect(where('손님한테 사과 문자 보내줘')).toBe('CUSTOMER_EXPERIENCE:SEND_CUSTOMER_MESSAGE');
+    expect(where('포장 주문 안내문 만들어줘')).toBe('CUSTOMER_EXPERIENCE:SEND_CUSTOMER_MESSAGE');
+  });
+
+  it('does not turn a list of customers into a message to all of them', () => {
+    // The rule keys on the message noun, never on 고객 or 단골. Getting this
+    // backwards would send mail to everyone the founder asked to count.
+    expect(where('단골 명단 정리해줘')).toBe('DATA:-');
+    expect(where('고객 목록 뽑아줘')).toBe('DATA:-');
+  });
+
+  it('places the rest of a shop owner\'s day', () => {
+    expect(where('메뉴판 새로 만들어줘')).toBe('CREATIVE:PUBLISH_POST');
+    expect(where('블로그 글 하나 써줘')).toBe('MARKETING:PUBLISH_POST');
+    expect(where('연말 이벤트 기획해봐')).toBe('MARKETING:-');
+  });
+
+  it('leaves planning without an external action', () => {
+    // A plan ends in a document. Attaching an action would send it to the
+    // approval room for a decision there is nothing to decide.
+    const a = assignWork('연말 이벤트 기획해봐', ALL);
+    expect(a.kind === 'ASSIGNED' && a.action).toBeUndefined();
+  });
+});

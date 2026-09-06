@@ -47,16 +47,30 @@ interface Rule {
  */
 const RULES: readonly Rule[] = [
   { re: /리뷰|후기|평점/, division: 'CUSTOMER_EXPERIENCE', title: '리뷰 응대', action: 'REPLY_REVIEW' },
+  // Sending something to customers. "단골한테 감사 문자 돌리자" and "손님한테
+  // 사과 문자 보내줘" are among the most ordinary things a shop owner asks for
+  // and had nowhere to land at all. Keyed on the message noun, not on 고객 or
+  // 단골, so "단골 명단 정리해줘" stays a data job rather than becoming an
+  // outbound message to every customer on it.
+  {
+    re: /문자|안내문|안내\s*문구|메시지|알림톡|공지|디엠|\bdm\b/i,
+    division: 'CUSTOMER_EXPERIENCE',
+    title: '고객 안내',
+    action: 'SEND_CUSTOMER_MESSAGE',
+  },
   { re: /광고\s*(비|예산)|예산\s*(조정|증액|감액)/, division: 'MARKETING', title: '광고 예산 검토', action: 'CHANGE_AD_BUDGET' },
   { re: /광고|캠페인/, division: 'MARKETING', title: '광고 운영', action: 'START_AD' },
-  { re: /인스타|instagram|게시물|포스팅|콘텐츠|피드/i, division: 'MARKETING', title: '콘텐츠 준비', action: 'PUBLISH_POST' },
+  { re: /인스타|instagram|게시물|포스팅|콘텐츠|피드|블로그|원고|카피/i, division: 'MARKETING', title: '콘텐츠 준비', action: 'PUBLISH_POST' },
   { re: /쿠폰|프로모션|할인\s*행사/, division: 'MARKETING', title: '프로모션 준비', action: 'ISSUE_COUPON' },
-  { re: /영상|사진|디자인|썸네일|제작/, division: 'CREATIVE', title: '제작', action: 'PUBLISH_POST' },
+  // Planning an event ends in a plan, not in anything leaving the building, so
+  // it carries no external action and needs no approval to be written.
+  { re: /이벤트|기획전|행사/, division: 'MARKETING', title: '기획' },
+  { re: /영상|사진|디자인|썸네일|제작|메뉴판|간판|전단|포스터|배너/, division: 'CREATIVE', title: '제작', action: 'PUBLISH_POST' },
   { re: /가격|단가|요금표/, division: 'OPERATIONS', title: '가격 검토', action: 'CHANGE_PRICE' },
   { re: /예약/, division: 'OPERATIONS', title: '예약 운영', action: 'CHANGE_RESERVATION' },
   { re: /재고|영업시간|매장\s*정보/, division: 'OPERATIONS', title: '매장 운영' },
   { re: /매출|정산|비용|지출|세금/, division: 'FINANCE', title: '재무 정리' },
-  { re: /지표|분석|통계|데이터/, division: 'DATA', title: '지표 정리' },
+  { re: /지표|분석|통계|데이터|명단|목록|리스트/, division: 'DATA', title: '자료 정리' },
   { re: /메일|이메일|문의|고객\s*연락/, division: 'LOBBY', title: '문의 응대', action: 'SEND_CUSTOMER_MESSAGE' },
   { re: /계약|약관|법무/, division: 'LEGAL', title: '계약 검토', action: 'SIGN_CONTRACT' },
   { re: /채용|인사/, division: 'PEOPLE', title: '인사 업무' },
