@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import type { FounderIdentity } from '@mycorp24/types';
+import { withEul, type FounderIdentity } from '@mycorp24/types';
+import { divisionMeta, type Division } from '@mycorp24/agent-types';
 import {
   becomesWork,
   buildBrief,
@@ -159,6 +160,15 @@ export async function POST(request: Request) {
  * instead of a task nobody owns. What it does place, it describes exactly: the
  * founder is told a draft is waiting, never that something was done.
  */
+/** The division's Korean name, falling back to its key if it is ever unknown. */
+function divisionName(key: string): string {
+  try {
+    return divisionMeta(key as Division).ko;
+  } catch {
+    return key;
+  }
+}
+
 async function asWork(
   db: Db,
   current: Current,
@@ -178,9 +188,12 @@ async function asWork(
     // §215: the company can grow a division, but not without being asked.
     const result: RouterResult = {
       classification: { intent: 'UNKNOWN', entities: {}, confidence: 1, mood: 'INSTRUCTION' },
+      // The founder is told the division's name, not its enum key. Printing
+      // CUSTOMER_EXPERIENCE at a Korean shop owner is the product forgetting
+      // who it is talking to.
       reply:
         `${address}, 그 일을 맡을 부서가 아직 없습니다. ` +
-        `${outcome.wanted} 부서를 신설하면 처리할 수 있습니다.`,
+        `${withEul(divisionName(outcome.wanted))} 신설하면 처리할 수 있습니다.`,
       cards: [],
       nextStep: { kind: 'NAVIGATE', route: '/hq' },
     };
