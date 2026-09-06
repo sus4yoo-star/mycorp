@@ -209,6 +209,8 @@ describe('a metric noun does not outrank a doing verb', () => {
 
   it('still answers a real metric ask', () => {
     expect(intent('매출 얼마야?')).toBe('SHOW_METRIC');
+    expect(intent('어제 예약 몇 건이야')).toBe('SHOW_METRIC');
+    expect(intent('이번 주 팔로워 몇 명 늘었어')).toBe('SHOW_METRIC');
     expect(intent('팔로워 알려줘')).toBe('SHOW_METRIC');
     expect(intent('예약 현황 보여줘')).toBe('SHOW_METRIC');
   });

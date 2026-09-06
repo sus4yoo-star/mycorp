@@ -115,6 +115,13 @@ const RULES: readonly Rule[] = [
 /** Verbs that mean "produce something", not "tell me a number". */
 const WANTS_DOING = /(준비|작성|써|쓰|만들|올려|보내|답변|응대|처리|초안)/;
 
+/**
+ * Ways of asking for the number itself. 몇 and 건수 matter: "어제 예약 몇 건이야"
+ * is as plain a metric question as exists and was falling through to
+ * "제가 이해하지 못했습니다".
+ */
+const ASKS_FOR_NUMBER = /\?|알려|보여|얼마|얼만|현황|몇|건수|어때|어떻/;
+
 const classifyDeterministic = (text: string): Classification => {
   const entities = extractEntities(text);
   const mood = readMood(text);
@@ -128,7 +135,7 @@ const classifyDeterministic = (text: string): Classification => {
   // "리뷰 답변 준비해줘" — the example this product puts on its own empty work
   // screen — was read as a request for review statistics and never became work
   // at all. A doing verb outranks a metric noun every time.
-  if (entities.metric && !WANTS_DOING.test(text) && /\?|알려|보여|얼마|현황/.test(text)) {
+  if (entities.metric && !WANTS_DOING.test(text) && ASKS_FOR_NUMBER.test(text)) {
     return { intent: 'SHOW_METRIC', entities, confidence: 0.8, mood };
   }
   return { intent: 'UNKNOWN', entities, confidence: 0, mood };
