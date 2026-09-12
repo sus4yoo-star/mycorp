@@ -1,4 +1,4 @@
-import { formatAddress } from '@mycorp24/business-logic';
+import { euro, formatAddress, i } from '@mycorp24/business-logic';
 import type { GenerativeCard, NextStep, RouterContext, RouterResult } from './router';
 
 /**
@@ -65,7 +65,8 @@ function describeNextStep(step: NextStep): string {
     case 'NAVIGATE':
       return `${step.route} 화면으로 이동합니다. 그 밖에는 아무 일도 일어나지 않습니다.`;
     case 'DECIDE_APPROVAL':
-      return `결재 ${step.approvalId} 건이 ${step.decision === 'APPROVE' ? '승인' : '반려'}으로 기록됩니다.`;
+      const decided = step.decision === 'APPROVE' ? '승인' : '반려';
+      return `결재 ${step.approvalId} 건이 ${decided}${euro(decided)} 기록됩니다.`;
     case 'GATEWAY_CALL':
       return `${step.provider}의 ${step.capability} 요청이 검사를 거칩니다. 아직 실행되지 않았습니다.`;
     case 'SAVE_APPROVAL_POLICY':
@@ -91,7 +92,7 @@ function describeCards(cards: readonly GenerativeCard[]): readonly string[] {
     switch (card.kind) {
       case 'DRAFT':
         return (
-          `- 이미 작성된 초안 "${card.title}"이(가) 이 답변 바로 아래 그대로 보입니다. ` +
+          `- 이미 작성된 초안 "${card.title}"${i(card.title)} 이 답변 바로 아래 그대로 보입니다. ` +
           (card.needsApproval
             ? '결재실에 올라가 있고 회장님 결정만 남았습니다. 내용을 다시 옮겨 적지 마십시오.'
             : '업무 화면에 정리되어 있습니다. 내용을 다시 옮겨 적지 마십시오.')

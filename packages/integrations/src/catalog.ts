@@ -107,3 +107,12 @@ export const MVP_CATALOG: readonly CatalogEntry[] = [
     status: 'MANUAL',
   },
 ];
+
+/**
+ * The name a founder recognises, for a provider key.
+ *
+ * Falls back to the key itself, which is not pretty but is at least not a lie.
+ * Nothing the founder reads should say GMAIL when it means Gmail.
+ */
+export const providerDisplayName = (provider: string): string =>
+  MVP_CATALOG.find((e) => e.provider === provider)?.displayName ?? provider;

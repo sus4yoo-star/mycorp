@@ -1,4 +1,5 @@
-import type { ConnectionTier } from '@mycorp24/types';
+import { eun, type ConnectionTier } from '@mycorp24/types';
+import { providerDisplayName } from './catalog';
 import { type Capability, type IntegrationAdapter } from './adapter';
 
 /**
@@ -28,11 +29,12 @@ export function resolveCapability(
   capability: Capability,
 ): Resolution {
   const decl = adapter.getCapabilities().find((d) => d.capability === capability);
+  const name = providerDisplayName(adapter.provider);
 
   if (!decl) {
     return {
       kind: 'UNAVAILABLE',
-      note: `${adapter.provider}는 ${capability} 기능을 선언하지 않았습니다.`,
+      note: `${name}${eun(name)} ${capability} 기능을 선언하지 않았습니다.`,
     };
   }
 

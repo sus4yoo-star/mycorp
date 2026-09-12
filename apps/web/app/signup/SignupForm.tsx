@@ -58,7 +58,7 @@ export default function SignupForm() {
       <div className="card">
         <div className="card-label">확인 메일 발송</div>
         <div className="card-row">
-          {email}로 확인 메일을 보냈습니다. 메일함의 링크를 눌러 주십시오.
+          {email} 주소로 확인 메일을 보냈습니다. 메일함의 링크를 눌러 주십시오.
         </div>
         <p className="hint" style={{ marginTop: '0.75rem' }}>
           메일이 오지 않는다면 메일 발송 설정(SMTP)이 아직 되어 있지 않은 것입니다.

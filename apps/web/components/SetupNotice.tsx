@@ -1,3 +1,4 @@
+import { withEul } from '@mycorp24/types';
 /**
  * Shown when Supabase is not configured.
  *
@@ -9,7 +10,7 @@ export default function SetupNotice({ what }: { what: string }) {
     <main className="wrap" style={{ paddingBlock: '3rem' }}>
       <h1 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem' }}>설정이 필요합니다</h1>
       <p style={{ color: 'var(--ink-soft)', maxWidth: '40rem' }}>
-        {what}을 사용하려면 Supabase 연결이 필요합니다. 아직 구성되지 않았습니다.
+        {withEul(what)} 사용하려면 Supabase 연결이 필요합니다. 아직 구성되지 않았습니다.
       </p>
       <ol style={{ color: 'var(--ink-soft)', maxWidth: '40rem', lineHeight: 1.9 }}>
         <li>Supabase 프로젝트를 만듭니다.</li>

@@ -70,7 +70,7 @@ export default function LoginForm() {
       <div className="card">
         <div className="card-label">전송 완료</div>
         <div className="card-row">
-          {email}로 로그인 링크를 보냈습니다. 메일함을 확인해 주십시오.
+          {email} 주소로 로그인 링크를 보냈습니다. 메일함을 확인해 주십시오.
         </div>
       </div>
     );
