@@ -49,10 +49,17 @@ export async function POST(request: Request) {
   const input = body as Record<string, unknown>;
   const provider = typeof input['provider'] === 'string' ? input['provider'] : '';
   const capability = typeof input['capability'] === 'string' ? input['capability'] : '';
-  const action = typeof input['action'] === 'string' ? input['action'] : 'SEND_EMAIL';
+  // No silent default. `action` is the key the approval policy is looked up
+  // under and the label the founder reads in the 결재실, so defaulting an
+  // unspecified one to SEND_EMAIL filed reads under a name for something that
+  // was never going to happen.
+  const action = typeof input['action'] === 'string' ? input['action'] : '';
 
   if (!CHAT_CAPABILITIES.has(capability) || !(CAPABILITIES as readonly string[]).includes(capability)) {
     return NextResponse.json({ error: 'capability is not permitted here' }, { status: 403 });
+  }
+  if (!action) {
+    return NextResponse.json({ error: 'action is required' }, { status: 400 });
   }
   if (!(EXTERNAL_ACTIONS as readonly string[]).includes(action)) {
     return NextResponse.json({ error: 'unknown action' }, { status: 400 });
