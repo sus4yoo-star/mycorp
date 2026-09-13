@@ -6,6 +6,19 @@ import type { ApprovalRequest, CompanyId } from '@mycorp24/types';
  * Deliberately thin: it exists so the web and mobile apps share one definition
  * of every endpoint. Business rules live in `@mycorp24/business-logic` and are
  * enforced on the server, never here.
+ *
+ * NOT WIRED YET, and read this before building on it:
+ *
+ *   - Nothing imports this package. Web talks to Supabase directly through
+ *     `@mycorp24/db`; mobile has no data layer at all.
+ *   - The two endpoints below do not exist. The web app serves /api/chat,
+ *     /api/gateway/run, /api/intelligence/collect and /api/oauth/*, and no
+ *     /api/companies/… route has been written.
+ *
+ * So this compiles and would fail at runtime against the app as it stands.
+ * It is kept because spec §02 (omnichannel) calls for exactly this seam, but
+ * a typed method is not an endpoint — check the route exists before you trust
+ * one of these signatures.
  */
 
 export interface ApiClientOptions {
