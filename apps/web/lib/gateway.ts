@@ -180,6 +180,29 @@ export async function runThroughGateway(
   const policies = toPolicies(await listApprovalPolicies(db, input.companyId));
   const credentials = credentialProvider();
 
+  // Permission first, before anything touches the vault.
+  //
+  // Resolving a credential decrypts it and, if it is near expiry, spends a
+  // refresh against the provider — an outbound call to Google for a request we
+  // were never going to make. The gateway checks this again as its own first
+  // line; that check is the guarantee, and this one only stops us paying for a
+  // refusal on the way to it.
+  if (!permissions.allowedCapabilities.has(input.capability)) {
+    await auditSink().write({
+      companyId: input.companyId,
+      at: new Date().toISOString(),
+      actor: input.agent,
+      action: `${input.provider}:${input.capability}`,
+      outcome: 'DENIED',
+      reason: `agent is not permitted to use ${input.capability}`,
+      integration: input.provider,
+    });
+    return {
+      kind: 'DENIED' as const,
+      reason: `agent is not permitted to use ${input.capability}`,
+    };
+  }
+
   const token = await credentials.resolve(input.companyId as CompanyId, input.provider);
   if (!token) {
     // Audit the refusal too: "we never tried" is itself a fact the internal
