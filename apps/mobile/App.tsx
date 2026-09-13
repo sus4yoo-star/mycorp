@@ -8,10 +8,8 @@ import {
   useColorScheme,
 } from 'react-native';
 import type { Division } from '@mycorp24/agent-types';
-import type { FounderIdentity } from '@mycorp24/types';
 import {
   formatFloor,
-  morningGreeting,
   resolveFloorStack,
   resolvePreset,
   sortTopDown,
@@ -20,26 +18,24 @@ import {
 /**
  * Mobile home — spec §74.
  *
- * The founder's phone is not a smaller headquarters. It leads with the morning
- * briefing and what needs a decision; the building is a summary, not the point.
+ * This app has no data layer yet: no session, no API client, no database. So
+ * it shows the one thing it can compute honestly — the shape of the building,
+ * from the same shared packages the web app uses (§73, exercised rather than
+ * asserted) — and says plainly that everything else lives on the web for now.
  *
- * Everything shown here is computed by the same shared packages the web app
- * uses. That is the architectural claim of spec §73, exercised rather than
- * asserted: floor numbers and the form of address are not duplicated per
- * platform.
+ * It used to open with "오늘 직접 결정하셔야 할 일은 2건입니다" above two
+ * invented approvals, addressed to a founder whose name was a constant in this
+ * file. A founder reaching for their phone would have been told that two
+ * decisions were waiting for them when none were. That is §151, on the screen
+ * they check first, and a mock is not an excuse: nothing on it said so.
  */
-
-const FOUNDER: FounderIdentity = {
-  ownerDisplayName: '유상철',
-  preferredTitle: '회장님',
-  locale: 'ko-KR',
-  addressForm: 'title_only',
-};
 
 export default function App() {
   const dark = useColorScheme() === 'dark';
   const t = dark ? darkTheme : lightTheme;
 
+  // The default shape, not a claim about any particular company — this app
+  // cannot know which company the reader owns until it can sign them in.
   const preset = resolvePreset('LOCAL_BUSINESS');
   const floors = sortTopDown(resolveFloorStack(preset.divisions as Division[]));
 
@@ -50,19 +46,14 @@ export default function App() {
         <Text style={[styles.wordmark, { color: t.ink }]}>MYCORP24</Text>
 
         <Text style={[styles.greeting, { color: t.ink }]}>
-          {morningGreeting(FOUNDER)}
-        </Text>
-        <Text style={[styles.brief, { color: t.inkSoft }]}>
-          오늘 직접 결정하셔야 할 일은 2건입니다.
+          사장님에서, 회장님으로.
         </Text>
 
         <View style={[styles.card, { backgroundColor: t.paper, borderColor: t.line }]}>
-          <Text style={[styles.cardTitle, { color: t.inkSoft }]}>결재 대기</Text>
+          <Text style={[styles.cardTitle, { color: t.inkSoft }]}>준비 중</Text>
           <Text style={[styles.cardBody, { color: t.ink }]}>
-            CMO가 Meta 광고 증액안을 결재 요청했습니다.
-          </Text>
-          <Text style={[styles.cardBody, { color: t.ink }]}>
-            운영본부가 주말 가격 변경안을 올렸습니다.
+            이 앱은 아직 회사에 연결되어 있지 않습니다. 결재와 아침 보고는
+            웹에서 확인하실 수 있습니다.
           </Text>
           <Text style={[styles.note, { color: t.inkSoft }]}>
             AI prepares. Founder approves. Company executes.
@@ -116,8 +107,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: 20, gap: 8 },
   wordmark: { fontSize: 13, fontWeight: '800', letterSpacing: 2, marginBottom: 20 },
-  greeting: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4 },
-  brief: { fontSize: 15, marginBottom: 20 },
+  greeting: { fontSize: 24, fontWeight: '700', letterSpacing: -0.4, marginBottom: 20 },
   section: { fontSize: 12, letterSpacing: 1, marginTop: 24, marginBottom: 8 },
   card: { borderWidth: 1, borderRadius: 2, padding: 16, gap: 6 },
   cardTitle: { fontSize: 12, letterSpacing: 1, marginBottom: 4 },
