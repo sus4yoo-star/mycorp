@@ -299,4 +299,60 @@ begin;
   end $$;
 rollback;
 
+-- Settling work is the founder's declaration. A second member of the company
+-- must not be able to close the founder's blocked work as DONE — the sentence
+-- the application writes with it says the founder handled it themselves, and
+-- that would be a false statement about work nobody did.
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  insert into tasks (company_id, title, instruction, status, detail)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '막힌 일', '해줘',
+          'BLOCKED', '연결이 없습니다.');
+
+  -- A member who is not the founder. They may see the work and may block it,
+  -- because that is the company working; they may not declare it over.
+  insert into memberships (company_id, user_id, role)
+  values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          '55555555-5555-5555-5555-555555555555', 'MEMBER')
+  on conflict do nothing;
+
+  set local request.jwt.claims = '{"sub":"55555555-5555-5555-5555-555555555555"}';
+  do $$
+  declare seen int;
+  begin
+    select count(*) into seen from tasks
+     where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and status = 'BLOCKED';
+    assert seen >= 1, 'a member of the company must still see its work';
+
+    begin
+      update tasks
+         set status = 'DONE', owner_kind = 'FOUNDER',
+             detail = '회장님이 직접 처리하셨습니다.'
+       where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and status = 'BLOCKED';
+      raise exception 'TEST FAILED: a non-founder closed the founder''s work as DONE';
+    exception when insufficient_privilege then null;
+    end;
+
+    begin
+      update tasks set status = 'CANCELLED'
+       where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and status = 'BLOCKED';
+      raise exception 'TEST FAILED: a non-founder cancelled the founder''s work';
+    exception when insufficient_privilege then null;
+    end;
+  end $$;
+
+  -- The founder can, on the same row.
+  set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111"}';
+  do $$
+  begin
+    update tasks set status = 'CANCELLED', detail = '회장님이 접으셨습니다.'
+     where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and status = 'BLOCKED';
+    assert (select count(*) from tasks
+             where company_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+               and status = 'CANCELLED') >= 1,
+      'the founder could not settle their own work';
+  end $$;
+rollback;
+
 \echo 'FLOW: all checks passed'

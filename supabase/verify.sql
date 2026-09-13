@@ -53,7 +53,19 @@ begin
     raise exception 'tasks is missing column(s): % — migration 0006 did not run', missing;
   end if;
 
-  -- 0c. A decision has to be able to close the work it was raised for.
+  -- 0c. The constraint that stops work being called done with nothing to show.
+  --     Its absence does not fail any other check here, so without this line a
+  --     wrong repair leaves production able to mark work DONE with no
+  --     deliverable while the deploy reports success.
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.tasks'::regclass
+       and conname = 'tasks_delivered_has_deliverable'
+  ) then
+    raise exception 'tasks_delivered_has_deliverable is missing — migration 0006 did not run fully';
+  end if;
+
+  -- 0d. A decision has to be able to close the work it was raised for.
   select count(*) into n from pg_constraint
    where conrelid = 'public.tasks'::regclass
      and conname = 'tasks_status_check'
