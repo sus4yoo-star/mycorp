@@ -125,11 +125,64 @@ describe('ToolGateway — spec §131, §220.4', () => {
     expect(audit.at(-1)?.outcome).toBe('PENDING_APPROVAL');
   });
 
-  it('executes once the founder has approved that request', async () => {
+  it('executes once the founder has approved that exact request', async () => {
+    const adapter = makeAdapter();
+    deps = {
+      ...deps,
+      policiesFor: () => [{ action: 'PUBLISH_POST', mode: 'ASK' }],
+      approvals: { verify: async () => true },
+    };
+    const out = await new ToolGateway(deps).execute(adapter, request({ approvalId: 'apr_1' }));
+    expect(out.kind).toBe('EXECUTED');
+  });
+
+  it('asks the verifier about this company, this action and this id', async () => {
+    // An approval for a different action, or one belonging to someone else, is
+    // not consent for this call. The gateway must hand over all three.
+    const adapter = makeAdapter();
+    const seen: unknown[] = [];
+    deps = {
+      ...deps,
+      policiesFor: () => [{ action: 'PUBLISH_POST', mode: 'ASK' }],
+      approvals: {
+        verify: async (input) => {
+          seen.push(input);
+          return true;
+        },
+      },
+    };
+    await new ToolGateway(deps).execute(adapter, request({ approvalId: 'apr_1' }));
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ approvalId: 'apr_1', action: 'PUBLISH_POST' });
+    expect(seen[0]).toHaveProperty('companyId');
+  });
+
+  it('does not believe an approval id on the caller\'s word alone', async () => {
+    // This is the whole finding: the field used to be treated as a boolean, so
+    // anything that could put a string here satisfied the approval gate.
     const adapter = makeAdapter();
     deps = { ...deps, policiesFor: () => [{ action: 'PUBLISH_POST', mode: 'ASK' }] };
     const out = await new ToolGateway(deps).execute(adapter, request({ approvalId: 'apr_1' }));
-    expect(out.kind).toBe('EXECUTED');
+    expect(out.kind).toBe('NEEDS_APPROVAL');
+    expect(adapter.write).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the verifier says no or cannot answer', async () => {
+    // Asking the founder twice costs them a click. Believing an unverified id
+    // costs them the gate.
+    for (const approvals of [
+      { verify: async () => false },
+      { verify: async () => { throw new Error('database is unreachable'); } },
+    ]) {
+      const adapter = makeAdapter();
+      const out = await new ToolGateway({
+        ...deps,
+        policiesFor: () => [{ action: 'PUBLISH_POST', mode: 'ASK' }],
+        approvals,
+      }).execute(adapter, request({ approvalId: 'apr_1' }));
+      expect(out.kind).toBe('NEEDS_APPROVAL');
+      expect(adapter.write).not.toHaveBeenCalled();
+    }
   });
 
   it('refuses when the integration is not connected', async () => {

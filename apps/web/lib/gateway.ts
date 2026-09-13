@@ -4,6 +4,7 @@ import {
   ToolGateway,
   defaultRiskEngine,
   type AgentPermissions,
+  type ApprovalCheck,
   type AuditSink,
   type CredentialProvider,
   type GatewayRequest,
@@ -101,6 +102,36 @@ function credentialProvider(): CredentialProvider {
   };
 }
 
+/**
+ * Does this approval id name a decision the founder actually made, for this
+ * company and this action?
+ *
+ * The gateway used to take the field's presence as the answer. The read below
+ * goes through the session-scoped client, so row level security is a second
+ * check on the company: an id belonging to another company is not visible here
+ * at all, and `status` has to say the founder approved it — a pending or
+ * rejected row is not consent.
+ */
+function approvalCheck(): ApprovalCheck {
+  return {
+    async verify({ companyId, approvalId, action }) {
+      const db = await getServerClient();
+      const { data, error } = await db
+        .from('approvals')
+        .select('id')
+        .eq('id', approvalId)
+        .eq('company_id', companyId)
+        .eq('action', action)
+        .eq('status', 'APPROVED')
+        .maybeSingle();
+
+      // A read that failed is not a yes. The gateway fails closed on false.
+      if (error) return false;
+      return data !== null;
+    },
+  };
+}
+
 function auditSink(): AuditSink {
   return {
     async write(event) {
@@ -176,6 +207,7 @@ export async function runThroughGateway(
     risk: defaultRiskEngine,
     credentials,
     audit: auditSink(),
+    approvals: approvalCheck(),
   });
 
   const outcome = await gateway.execute(adapter, input);

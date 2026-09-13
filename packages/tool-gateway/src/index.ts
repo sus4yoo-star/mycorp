@@ -70,12 +70,36 @@ export interface CredentialProvider {
   resolve(companyId: CompanyId, provider: string): Promise<string | null>;
 }
 
+/**
+ * Confirms that an `approvalId` names a decision the founder actually made.
+ *
+ * Without this the gateway treated the field as a boolean: any caller that
+ * could put a string in `approvalId` satisfied an ASK policy. The whole
+ * approval gate came down to one field being non-empty.
+ *
+ * A verifier must check all three of company, action and decided state.
+ * An approval for a different action, or one still pending, is not consent
+ * for this call.
+ */
+export interface ApprovalCheck {
+  verify(input: {
+    readonly companyId: CompanyId;
+    readonly approvalId: string;
+    readonly action: ExternalAction;
+  }): Promise<boolean>;
+}
+
 export interface GatewayDeps {
   readonly permissionsFor: (agent: AgentId) => AgentPermissions | undefined;
   readonly policiesFor: (companyId: CompanyId) => readonly ApprovalPolicy[];
   readonly risk: RiskEngine;
   readonly credentials: CredentialProvider;
   readonly audit: AuditSink;
+  /**
+   * Optional, but an absent verifier means no `approvalId` is ever believed —
+   * the gate fails closed rather than trusting the caller's word.
+   */
+  readonly approvals?: ApprovalCheck;
   readonly now?: () => Date;
 }
 
@@ -88,6 +112,27 @@ export type GatewayOutcome =
 
 export class ToolGateway {
   constructor(private readonly deps: GatewayDeps) {}
+
+  /**
+   * Has the founder already decided this exact request?
+   *
+   * Fails closed on every uncertainty: no id, no verifier, a verifier that
+   * says no, or a verifier that throws. Asking twice costs the founder a
+   * click; believing an unverified id costs them the gate.
+   */
+  private async approved(req: GatewayRequest): Promise<boolean> {
+    if (!req.approvalId) return false;
+    if (!this.deps.approvals) return false;
+    try {
+      return await this.deps.approvals.verify({
+        companyId: req.companyId,
+        approvalId: req.approvalId,
+        action: req.action,
+      });
+    } catch {
+      return false;
+    }
+  }
 
   async execute(
     adapter: IntegrationAdapter,
@@ -144,7 +189,7 @@ export class ToolGateway {
       this.deps.policiesFor(req.companyId),
     );
     if (decision.mode === 'BLOCK') return deny(decision.reason);
-    if (decision.mode === 'ASK' && !req.approvalId) {
+    if (decision.mode === 'ASK' && !(await this.approved(req))) {
       await this.deps.audit.write({
         ...base,
         outcome: 'PENDING_APPROVAL',
