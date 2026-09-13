@@ -39,6 +39,14 @@ Supabase만 넣으면 마이그레이션만 자동으로 돌아갑니다.
 사이트가 생깁니다. 그 뒤 Project configuration → General의 **Project ID**(= Site ID)를
 위 시크릿에 넣으십시오.
 
+**사이트를 만든 뒤에는 저장소 연결을 끊으십시오.** Site configuration → Build & deploy
+→ Continuous deployment → **Unlink repository**.
+
+연결을 남겨두면 push 한 번에 빌드가 **두 번** 돕니다 — Netlify가 자체적으로 한 번,
+GitHub Actions가 한 번. 결과물은 같은데 빌드 시간만 두 배로 나가고, 무료 한도는
+그만큼 빨리 바닥납니다. 이 저장소에서 실제로 그렇게 소진됐습니다.
+배포는 Actions 하나만 담당하게 두는 것이 맞습니다.
+
 ### Netlify 런타임 환경변수
 
 빌드에 필요한 공개 값은 GitHub 시크릿에서 주입되지만,
@@ -242,6 +250,8 @@ Meta 앱 심사가 필요하며, 어댑터가 **미지원으로 선언**하고 �
 | 증상 | 원인 |
 |---|---|
 | Deploy가 통째로 skip됨 | 시크릿 미등록 — Actions 로그의 `preflight` 확인 |
+| Actions는 초록인데 사이트가 그대로 | Netlify 크레딧 소진. `scripts/netlify-check.sh`가 마지막 배포 기록에서 `Skipped due to account credit usage exceeded`를 그대로 읽어옵니다. 결제하거나 한도 리셋을 기다리는 수밖에 없습니다 |
+| 모든 주소가 404인데 배포는 성공 | 퍼블리시가 Next.js 런타임을 잃은 경우. 배포 끝에 `scripts/smoke.sh`가 이걸 잡습니다. 복구는 Netlify → Deploys → 이전 배포 선택 → Publish deploy |
 | `supabase link` 실패 | `SUPABASE_DB_PASSWORD` 또는 `SUPABASE_PROJECT_ID` 오류 |
 | verify.sql이 예외를 던짐 | 마이그레이션 일부만 적용됨 — 메시지가 어느 불변식인지 알려줍니다 |
 | "설정이 필요합니다" 화면 | `NEXT_PUBLIC_SUPABASE_*` 누락 |
