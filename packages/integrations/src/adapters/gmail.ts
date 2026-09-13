@@ -49,6 +49,21 @@ export interface MailSummary {
   readonly receivedAt: string | null;
 }
 
+/**
+ * Declared outside the class so what this adapter can do is answerable without
+ * a token. Whether a capability is shipped is a fact about the code, not about
+ * any one connection.
+ */
+export const GMAIL_CAPABILITIES: readonly CapabilityDeclaration[] = [
+  { capability: 'READ_MAIL', supported: true, tier: 'OFFICIAL_API' },
+  {
+    capability: 'SEND_MAIL',
+    supported: false,
+    tier: 'OFFICIAL_API',
+    note: '현재 연결된 권한은 읽기 전용입니다. 발송 권한은 아직 연결되어 있지 않습니다.',
+  },
+];
+
 export class GmailAdapter implements IntegrationAdapter {
   readonly provider = 'GMAIL';
   readonly status: IntegrationStatus = 'READ_ONLY';
@@ -60,15 +75,7 @@ export class GmailAdapter implements IntegrationAdapter {
   }
 
   getCapabilities(): readonly CapabilityDeclaration[] {
-    return [
-      { capability: 'READ_MAIL', supported: true, tier: 'OFFICIAL_API' },
-      {
-        capability: 'SEND_MAIL',
-        supported: false,
-        tier: 'OFFICIAL_API',
-        note: '현재 연결된 권한은 읽기 전용입니다. 발송 권한은 아직 연결되어 있지 않습니다.',
-      },
-    ];
+    return GMAIL_CAPABILITIES;
   }
 
   async connect(): Promise<AdapterResult> {

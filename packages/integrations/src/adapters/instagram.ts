@@ -54,6 +54,30 @@ export interface PostSummary {
   readonly comments: number;
 }
 
+/** Declared outside the class for the same reason as Gmail's. */
+export const INSTAGRAM_CAPABILITIES: readonly CapabilityDeclaration[] = [
+  { capability: 'READ_SOCIAL', supported: true, tier: 'OFFICIAL_API' },
+  { capability: 'READ_STATS', supported: true, tier: 'OFFICIAL_API' },
+  {
+    capability: 'PUBLISH_SOCIAL',
+    supported: false,
+    tier: 'OFFICIAL_API',
+    note: 'Instagram 게시 권한(instagram_content_publish)은 Meta 앱 심사 승인 후에 사용할 수 있습니다. 현재 연결된 권한은 조회 전용입니다.',
+  },
+  {
+    capability: 'READ_ADS',
+    supported: false,
+    tier: 'OFFICIAL_API',
+    note: '광고 데이터 조회에는 ads_read 권한이 필요합니다. 현재 연결에는 포함되어 있지 않습니다.',
+  },
+  {
+    capability: 'WRITE_ADS_BUDGET',
+    supported: false,
+    tier: 'OFFICIAL_API',
+    note: '광고비 변경에는 ads_management 권한과 Meta 앱 심사가 필요합니다.',
+  },
+];
+
 export class InstagramAdapter implements IntegrationAdapter {
   readonly provider = 'INSTAGRAM';
   readonly status: IntegrationStatus = 'READ_ONLY';
@@ -65,28 +89,7 @@ export class InstagramAdapter implements IntegrationAdapter {
   }
 
   getCapabilities(): readonly CapabilityDeclaration[] {
-    return [
-      { capability: 'READ_SOCIAL', supported: true, tier: 'OFFICIAL_API' },
-      { capability: 'READ_STATS', supported: true, tier: 'OFFICIAL_API' },
-      {
-        capability: 'PUBLISH_SOCIAL',
-        supported: false,
-        tier: 'OFFICIAL_API',
-        note: 'Instagram 게시 권한(instagram_content_publish)은 Meta 앱 심사 승인 후에 사용할 수 있습니다. 현재 연결된 권한은 조회 전용입니다.',
-      },
-      {
-        capability: 'READ_ADS',
-        supported: false,
-        tier: 'OFFICIAL_API',
-        note: '광고 데이터 조회에는 ads_read 권한이 필요합니다. 현재 연결에는 포함되어 있지 않습니다.',
-      },
-      {
-        capability: 'WRITE_ADS_BUDGET',
-        supported: false,
-        tier: 'OFFICIAL_API',
-        note: '광고비 변경에는 ads_management 권한과 Meta 앱 심사가 필요합니다.',
-      },
-    ];
+    return INSTAGRAM_CAPABILITIES;
   }
 
   async connect(): Promise<AdapterResult> {

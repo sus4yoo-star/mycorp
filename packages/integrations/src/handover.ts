@@ -1,5 +1,7 @@
 import { withEul, type ExternalAction } from '@mycorp24/types';
-import type { Capability } from './adapter';
+import type { Capability, CapabilityDeclaration } from './adapter';
+import { GMAIL_CAPABILITIES } from './adapters/gmail';
+import { INSTAGRAM_CAPABILITIES } from './adapters/instagram';
 import { MVP_CATALOG, type CatalogEntry } from './catalog';
 
 /**
@@ -42,10 +44,42 @@ const HANDOVERS: Partial<Record<ExternalAction, Handover>> = {
 export const handoverFor = (action: ExternalAction): Handover | null =>
   HANDOVERS[action] ?? null;
 
-/** Catalog entries that claim the capability. Claiming is not connecting. */
+/**
+ * What a shipped adapter actually declares it can do, by provider.
+ *
+ * Read from the adapters themselves rather than restated here, so this cannot
+ * drift from the code that would do the work.
+ */
+export type ShippedCapabilities = Readonly<Record<string, readonly CapabilityDeclaration[]>>;
+
+const SHIPPED: ShippedCapabilities = {
+  GMAIL: GMAIL_CAPABILITIES,
+  INSTAGRAM: INSTAGRAM_CAPABILITIES,
+};
+
+/**
+ * Providers that could carry this capability out **today**.
+ *
+ * The catalog's capability list is what a provider is for; it is not what we
+ * have built. Gmail's entry lists SEND_MAIL and the adapter declares it
+ * unsupported — the OAuth flow does not even ask for the scope.
+ *
+ * Filtering on the catalog alone produced a promise no connection could keep:
+ * a founder who approved a 메일 발송 was told "연결실에서 연결해 주시면 바로
+ * 실행합니다", granted Google access, gave the instruction again, approved
+ * again, and landed back on 중단 — having spent a real action to learn that
+ * the answer was always no. An honest "아직 그럴 수 있는 연결이 없습니다" costs
+ * them nothing.
+ */
 export const providersForCapability = (
   capability: Capability,
-): readonly CatalogEntry[] => MVP_CATALOG.filter((e) => e.capabilities.includes(capability));
+  shipped: ShippedCapabilities = SHIPPED,
+): readonly CatalogEntry[] =>
+  MVP_CATALOG.filter(
+    (e) =>
+      e.capabilities.includes(capability) &&
+      (shipped[e.provider] ?? []).some((d) => d.capability === capability && d.supported),
+  );
 
 /**
  * How far an approved action can actually get, given what the company has
@@ -79,9 +113,17 @@ export type HandoverPlan =
 /** Every refusal starts the same way, because the approval really was recorded. */
 const RECORDED = '승인은 기록되었습니다.';
 
+/**
+ * `shipped` is injectable for one reason: today no adapter declares any
+ * outbound capability supported, so NOT_CONNECTED and READY cannot be reached
+ * through any real action. They are the branches that come alive the day a
+ * write adapter ships, and a branch nothing exercises is a branch that has
+ * never been shown to work.
+ */
 export function planHandover(
   action: ExternalAction,
   connectedCatalogIds: readonly string[],
+  shipped: ShippedCapabilities = SHIPPED,
 ): HandoverPlan {
   const handover = handoverFor(action);
   if (!handover) {
@@ -91,7 +133,7 @@ export function planHandover(
     };
   }
 
-  const candidates = providersForCapability(handover.capability);
+  const candidates = providersForCapability(handover.capability, shipped);
   if (candidates.length === 0) {
     return {
       kind: 'NO_PROVIDER',

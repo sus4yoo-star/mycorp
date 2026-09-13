@@ -42,9 +42,18 @@ describe('handoverFor', () => {
 });
 
 describe('providersForCapability', () => {
-  it('reads the catalog rather than a second list of its own', () => {
-    expect(providersForCapability('SEND_MAIL').map((c) => c.id)).toEqual(['gmail']);
-    expect(providersForCapability('PUBLISH_SOCIAL').map((c) => c.id)).toEqual(['meta-instagram']);
+  it('answers what we have built, not what the catalog is for', () => {
+    // Gmail's catalog entry lists SEND_MAIL and the adapter declares it
+    // unsupported — the OAuth flow does not even request the scope. Answering
+    // from the catalog alone told founders that connecting Gmail would let the
+    // company send mail. It would not.
+    expect(providersForCapability('SEND_MAIL')).toEqual([]);
+    expect(providersForCapability('PUBLISH_SOCIAL')).toEqual([]);
+    expect(providersForCapability('WRITE_ADS_BUDGET')).toEqual([]);
+
+    // What the adapters do declare supported still comes back.
+    expect(providersForCapability('READ_MAIL').map((c) => c.id)).toEqual(['gmail']);
+    expect(providersForCapability('READ_SOCIAL').map((c) => c.id)).toEqual(['meta-instagram']);
   });
 
   it('is empty for a capability nothing in the catalog claims', () => {
@@ -88,33 +97,42 @@ describe('planHandover', () => {
     expect(plan.kind === 'NO_MACHINE' && plan.reason).toMatch(/회장님이 직접/);
   });
 
-  it('distinguishes "nothing can do this" from "you have not connected it"', () => {
-    // 리뷰 답글: nothing in the catalog claims RESPOND_REVIEW, so connecting
-    // more accounts would not help. Saying "연결해 주세요" here would send the
-    // founder to do something that changes nothing.
-    const review = planHandover('REPLY_REVIEW', ['naver-place', 'gmail']);
-    expect(review.kind).toBe('NO_PROVIDER');
-    expect(review.kind === 'NO_PROVIDER' && review.reason).not.toMatch(/연결실/);
-
-    // 메일: Gmail can, this company has not connected it.
-    const mail = planHandover('SEND_EMAIL', []);
-    expect(mail.kind).toBe('NOT_CONNECTED');
-    expect(mail.kind === 'NOT_CONNECTED' && mail.reason).toMatch(/Gmail/);
-    expect(mail.kind === 'NOT_CONNECTED' && mail.reason).toMatch(/연결실/);
+  it('never sends the founder to connect something that would not help', () => {
+    // This is the rule the whole plan exists for. Today no shipped adapter can
+    // perform any outbound action, so every one of these must say "아직 그럴 수
+    // 있는 연결이 없습니다" — never "연결실에서 연결해 주시면 바로 실행합니다",
+    // which costs the founder an OAuth grant and a second approval to learn the
+    // answer was always no.
+    for (const connected of [[], ['gmail'], ['meta-instagram'], ['gmail', 'meta-instagram', 'naver-place']]) {
+      for (const action of ['SEND_EMAIL', 'PUBLISH_POST', 'REPLY_REVIEW', 'CHANGE_AD_BUDGET'] as const) {
+        const plan = planHandover(action, connected);
+        expect(plan.kind, `${action} with ${connected.join()}`).toBe('NO_PROVIDER');
+        expect(plan.kind === 'NO_PROVIDER' && plan.reason).not.toMatch(/연결실/);
+      }
+    }
   });
 
-  it('is ready only when the company has the connection in hand', () => {
-    const plan = planHandover('SEND_EMAIL', ['gmail']);
-    expect(plan.kind).toBe('READY');
-    if (plan.kind !== 'READY') return;
-    expect(plan.target.provider).toBe('GMAIL');
-    expect(plan.capability).toBe('SEND_MAIL');
+  // The day a send-capable Gmail adapter ships, these are the branches that
+  // take over. Nothing reaches them through a real action today, and a branch
+  // nothing exercises is a branch that has never been shown to work.
+  const WHEN_SENDING_SHIPS = {
+    GMAIL: [{ capability: 'SEND_MAIL', supported: true, tier: 'OFFICIAL_API' }],
+  } as const;
+
+  it('still tells the founder to connect when connecting would genuinely help', () => {
+    const plan = planHandover('SEND_EMAIL', [], WHEN_SENDING_SHIPS);
+    expect(plan.kind).toBe('NOT_CONNECTED');
+    expect(plan.kind === 'NOT_CONNECTED' && plan.reason).toMatch(/Gmail/);
+    expect(plan.kind === 'NOT_CONNECTED' && plan.reason).toMatch(/연결실/);
   });
 
-  it('ignores connections that have nothing to do with the action', () => {
-    // Instagram being connected must not make a mail action look possible.
-    expect(planHandover('SEND_EMAIL', ['meta-instagram']).kind).toBe('NOT_CONNECTED');
-    expect(planHandover('PUBLISH_POST', ['gmail']).kind).toBe('NOT_CONNECTED');
-    expect(planHandover('PUBLISH_POST', ['meta-instagram']).kind).toBe('READY');
+  it('is ready only when the company has a connection that can actually do it', () => {
+    const ready = planHandover('SEND_EMAIL', ['gmail'], WHEN_SENDING_SHIPS);
+    expect(ready.kind).toBe('READY');
+    if (ready.kind === 'READY') expect(ready.target.provider).toBe('GMAIL');
+
+    // An unrelated connection never makes an action look possible.
+    expect(planHandover('SEND_EMAIL', ['meta-instagram'], WHEN_SENDING_SHIPS).kind)
+      .toBe('NOT_CONNECTED');
   });
 });
