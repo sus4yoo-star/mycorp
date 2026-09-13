@@ -2,7 +2,7 @@ import { withEul, type ExternalAction } from '@mycorp24/types';
 import type { Capability, CapabilityDeclaration } from './adapter';
 import { GMAIL_CAPABILITIES } from './adapters/gmail';
 import { INSTAGRAM_CAPABILITIES } from './adapters/instagram';
-import { MVP_CATALOG, type CatalogEntry } from './catalog';
+import { MVP_CATALOG, connectionIdsFor, type CatalogEntry } from './catalog';
 
 /**
  * What an approved decision would actually hand to a machine — spec §104, §151.
@@ -143,7 +143,7 @@ export function planHandover(
   }
 
   const connected = new Set(connectedCatalogIds);
-  const target = candidates.find((c) => connected.has(c.id));
+  const target = candidates.find((c) => connectionIdsFor(c).some((id) => connected.has(id)));
 
   if (!target) {
     return {

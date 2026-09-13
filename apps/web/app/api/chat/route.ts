@@ -10,8 +10,15 @@ import {
   type RouterContext,
   type RouterResult,
 } from '@mycorp24/chat';
+import { providerForCatalogId } from '@mycorp24/integrations';
 import { createAiProvider } from '@mycorp24/ai-gateway';
-import { getCurrentCompany, listAgents, listPendingApprovals } from '@mycorp24/db';
+import {
+  getCurrentCompany,
+  listAgents,
+  listConnections,
+  listOpenTasks,
+  listPendingApprovals,
+} from '@mycorp24/db';
 import { formatAddress } from '@mycorp24/business-logic';
 import { runInstruction } from '../../../lib/work';
 import { getServerClient, getSessionUser } from '../../../lib/supabase/server';
@@ -65,26 +72,41 @@ type Db = Awaited<ReturnType<typeof getServerClient>>;
 type Current = NonNullable<Awaited<ReturnType<typeof getCurrentCompany>>>;
 
 async function liveContext(db: Db, current: Current): Promise<RouterContext> {
-  const [pending, agents] = await Promise.all([
+  const [pending, agents, open, connections] = await Promise.all([
     listPendingApprovals(db, current.companyId),
     listAgents(db, current.companyId),
+    listOpenTasks(db, current.companyId),
+    listConnections(db, current.companyId),
   ]);
+
+  // Staff with something actually in flight. BLOCKED is deliberately not in
+  // here: stopped work is not someone working.
+  const working = new Set(
+    open
+      .filter((t) => t.status === 'IN_PROGRESS' || t.status === 'AWAITING_APPROVAL')
+      .map((t) => t.agent_id)
+      .filter((id): id is string => id !== null),
+  );
 
   return {
     founder: current.founder,
-    // No integration adapters have shipped yet, so nothing is connected. Saying
-    // so is the point: the chief of staff must not claim otherwise (§151).
-    connectedProviders: new Set<string>(),
+    // What the company has actually connected. This was a hardcoded empty set
+    // with a comment saying no adapter had shipped — two have, read-only, so
+    // the chief of staff was telling a founder with Gmail connected that
+    // nothing was.
+    connectedProviders: new Set(
+      connections
+        .map((c) => providerForCatalogId(c.catalog_id))
+        .filter((p): p is string => p !== null),
+    ),
     pendingApprovals: pending.map((a) => ({
       id: a.id,
       title: a.title,
       ...(a.amount !== null ? { amount: Number(a.amount) } : {}),
       ...(a.currency !== null ? { currency: a.currency } : {}),
     })),
-    // The real roster. This read 0 before anyone was ever hired, so the chief
-    // of staff told a founder their AI company had nobody in it — which was
-    // true, and was the bug.
-    workingAgentCount: agents.length,
+    workingAgentCount: working.size,
+    rosterCount: agents.length,
   };
 }
 

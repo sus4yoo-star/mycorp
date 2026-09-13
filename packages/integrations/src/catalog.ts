@@ -116,3 +116,25 @@ export const MVP_CATALOG: readonly CatalogEntry[] = [
  */
 export const providerDisplayName = (provider: string): string =>
   MVP_CATALOG.find((e) => e.provider === provider)?.displayName ?? provider;
+
+/**
+ * Every spelling a stored connection may carry for this entry.
+ *
+ * There are two identifiers for the same thing and they do not agree. The
+ * OAuth callback stores `provider.id.toLowerCase().replace(/_/g,'-')`, so
+ * Instagram lands in the database as `instagram`, while this catalog calls the
+ * same entry `meta-instagram`. Anything comparing a stored connection against a
+ * catalog id therefore missed it and concluded the company had not connected —
+ * silently, and only for Meta.
+ *
+ * Rather than migrate rows that already exist, both spellings are accepted and
+ * this is the one place that knows there are two.
+ */
+export const connectionIdsFor = (entry: CatalogEntry): readonly string[] => {
+  const fromProvider = entry.provider.toLowerCase().replace(/_/g, '-');
+  return fromProvider === entry.id ? [entry.id] : [entry.id, fromProvider];
+};
+
+/** The provider key a stored connection belongs to, or null if unknown to us. */
+export const providerForCatalogId = (catalogId: string): string | null =>
+  MVP_CATALOG.find((e) => connectionIdsFor(e).includes(catalogId))?.provider ?? null;

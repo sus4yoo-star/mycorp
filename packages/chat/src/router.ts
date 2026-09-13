@@ -30,13 +30,23 @@ export interface RouterContext {
   /** Providers this company has actually connected. */
   readonly connectedProviders: ReadonlySet<string>;
   readonly pendingApprovals: readonly PendingApproval[];
+  /**
+   * Staff with a task actually in flight — not the roster.
+   *
+   * These were the same number, so a company that had just hired seven people
+   * and done nothing reported "AI 직원 7명이 업무 중입니다" with an empty tasks
+   * table. How many people work here and how many are working are different
+   * questions, and the founder asked the second one.
+   */
   readonly workingAgentCount?: number;
+  /** How many people the company employs at all. */
+  readonly rosterCount?: number;
 }
 
 export type GenerativeCard =
   | { readonly kind: 'APPROVAL_LIST'; readonly approvals: readonly PendingApproval[] }
   | { readonly kind: 'METRIC'; readonly metric: string; readonly period: string; readonly ready: boolean }
-  | { readonly kind: 'AGENT_STATUS'; readonly working: number }
+  | { readonly kind: 'AGENT_STATUS'; readonly working: number; readonly roster: number }
   | { readonly kind: 'CONNECT'; readonly provider: string; readonly connected: boolean }
   | { readonly kind: 'POLICY_CHANGE'; readonly summary: string }
   | { readonly kind: 'AUTOMATION'; readonly summary: string }
@@ -420,13 +430,18 @@ export function respond(
 
     case 'AGENT_STATUS': {
       const working = ctx.workingAgentCount ?? 0;
-      return done(
+      const roster = ctx.rosterCount ?? 0;
+      // Both numbers, because either alone misleads: the roster answers a
+      // question about headcount, and the founder asked what is being done.
+      const reply =
         working > 0
-          ? `${addr}, 현재 AI 직원 ${working}명이 업무 중입니다.`
-          : `${addr}, 지금 진행 중인 업무는 없습니다.`,
-        { kind: 'NAVIGATE', route: '/hq' },
-        [{ kind: 'AGENT_STATUS', working }],
-      );
+          ? `${addr}, 직원 ${roster}명 중 ${working}명이 업무 중입니다.`
+          : roster > 0
+            ? `${addr}, 직원 ${roster}명이 있고, 지금 진행 중인 업무는 없습니다.`
+            : `${addr}, 아직 직원이 없습니다.`;
+      return done(reply, { kind: 'NAVIGATE', route: '/hq' }, [
+        { kind: 'AGENT_STATUS', working, roster },
+      ]);
     }
 
     case 'SHOW_REPORT':

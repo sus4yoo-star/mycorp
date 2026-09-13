@@ -32,6 +32,7 @@ export interface ReplyBrief {
   readonly connectedProviders: readonly string[];
   readonly pendingApprovalCount: number;
   readonly workingAgentCount: number;
+  readonly rosterCount: number;
 }
 
 export function buildBrief(
@@ -50,6 +51,7 @@ export function buildBrief(
     connectedProviders: [...ctx.connectedProviders].sort(),
     pendingApprovalCount: ctx.pendingApprovals.length,
     workingAgentCount: ctx.workingAgentCount ?? 0,
+    rosterCount: ctx.rosterCount ?? 0,
   };
 }
 
@@ -102,7 +104,7 @@ function describeCards(cards: readonly GenerativeCard[]): readonly string[] {
       case 'METRIC':
         return `- ${card.period} ${card.metric} 카드가 보입니다. ${card.ready ? '집계 중입니다.' : '연결된 데이터 소스가 없습니다.'}`;
       case 'AGENT_STATUS':
-        return `- 업무 중인 AI 직원 ${card.working}명이 카드로 보입니다.`;
+        return `- 직원 ${card.roster}명 중 ${card.working}명이 업무 중이라는 카드가 보입니다.`;
       case 'CONNECT':
         return `- ${card.provider} 연결 상태 카드가 보입니다: ${card.connected ? '연결됨' : '연결되지 않음'}.`;
       case 'POLICY_CHANGE':
@@ -131,7 +133,7 @@ export function systemPrompt(brief: ReplyBrief): string {
     '## 지금 회사의 사실',
     `- 연결된 서비스: ${connected}`,
     `- 결재 대기: ${brief.pendingApprovalCount}건`,
-    `- 업무 중인 AI 직원: ${brief.workingAgentCount}명`,
+    `- AI 직원: ${brief.rosterCount}명 (그중 지금 업무 중인 직원: ${brief.workingAgentCount}명)`,
     ...describeCards(brief.cards),
     '',
     '## 이 발화에 대해 이미 정해진 것',

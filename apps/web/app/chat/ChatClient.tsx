@@ -49,7 +49,9 @@ function Cards({ result }: { result: RouterResult }) {
             return (
               <div className="card" key={i}>
                 <div className="card-label">AI 직원</div>
-                <div className="card-row">{card.working}명 업무 중</div>
+                <div className="card-row">
+                  {card.roster}명 · {card.working}명 업무 중
+                </div>
               </div>
             );
           case 'CONNECT':

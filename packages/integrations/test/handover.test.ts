@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CAPABILITIES } from '../src/adapter';
-import { MVP_CATALOG } from '../src/catalog';
+import { MVP_CATALOG, connectionIdsFor, providerForCatalogId } from '../src/catalog';
 import { handoverFor, planHandover, providersForCapability } from '../src/handover';
 
 describe('handoverFor', () => {
@@ -134,5 +134,38 @@ describe('planHandover', () => {
     // An unrelated connection never makes an action look possible.
     expect(planHandover('SEND_EMAIL', ['meta-instagram'], WHEN_SENDING_SHIPS).kind)
       .toBe('NOT_CONNECTED');
+  });
+});
+
+describe('the two spellings a connection can have', () => {
+  it('recognises Meta under the id the OAuth callback actually stores', () => {
+    // The callback writes provider.id lowercased with dashes — 'instagram' —
+    // while the catalog entry is 'meta-instagram'. Comparing one against the
+    // other missed every Meta connection and reported "연결되어 있지 않습니다"
+    // to a founder who had connected it.
+    expect(providerForCatalogId('instagram')).toBe('INSTAGRAM');
+    expect(providerForCatalogId('meta-instagram')).toBe('INSTAGRAM');
+    expect(providerForCatalogId('gmail')).toBe('GMAIL');
+    expect(providerForCatalogId('nothing-we-know')).toBeNull();
+  });
+
+  it('is a round trip for every entry in the catalog', () => {
+    // Anything that stops round-tripping is a provider whose connections
+    // silently stop being found.
+    for (const entry of MVP_CATALOG) {
+      for (const id of connectionIdsFor(entry)) {
+        expect(providerForCatalogId(id), id).toBe(entry.provider);
+      }
+      expect(connectionIdsFor(entry), entry.id).toContain(entry.id);
+    }
+  });
+
+  it('plans against a connection stored under either spelling', () => {
+    const shipped = {
+      INSTAGRAM: [{ capability: 'PUBLISH_SOCIAL', supported: true, tier: 'OFFICIAL_API' }],
+    } as const;
+    for (const stored of ['instagram', 'meta-instagram']) {
+      expect(planHandover('PUBLISH_POST', [stored], shipped).kind, stored).toBe('READY');
+    }
   });
 });

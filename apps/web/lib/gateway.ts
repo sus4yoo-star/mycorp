@@ -14,6 +14,7 @@ import {
   InstagramAdapter,
   getProvider,
   mergeRefreshedTokens,
+  providerForCatalogId,
   refreshAccessToken,
   type IntegrationAdapter,
 } from '@mycorp24/integrations';
@@ -51,7 +52,9 @@ export function makeAdapter(provider: string, accessToken: string): IntegrationA
   }
 }
 
-const catalogIdFor = (provider: string) => provider.toLowerCase().replace(/_/g, '-');
+/** Accepts either spelling a connection may be stored under — see catalog.ts. */
+const isConnectionFor = (catalogId: string, provider: string) =>
+  providerForCatalogId(catalogId) === provider;
 
 /**
  * Resolve a stored token for a provider.
@@ -64,7 +67,7 @@ function credentialProvider(): CredentialProvider {
     async resolve(companyId, provider) {
       const db = await getServerClient();
       const connections = await listConnections(db, companyId);
-      const connection = connections.find((c) => c.catalog_id === catalogIdFor(provider));
+      const connection = connections.find((c) => isConnectionFor(c.catalog_id, provider));
       if (!connection) return null;
 
       const vault = getVault();
