@@ -55,7 +55,7 @@ export async function settleApproval(
     return { kind: 'CANCELLED', task: await close(db, input, task, 'CANCELLED', detail) };
   }
 
-  const reason = await attempt(db, input);
+  const reason = await attempt(db, input, task);
   if (reason.kind === 'DONE') {
     return {
       kind: 'EXECUTED',
@@ -84,6 +84,7 @@ type Attempt =
 async function attempt(
   db: Db,
   input: { readonly companyId: string; readonly userId: string; readonly approval: ApprovalRow },
+  task: TaskRow | null,
 ): Promise<Attempt> {
   const connections = await listConnections(db, input.companyId);
   const plan = planHandover(
@@ -111,7 +112,15 @@ async function attempt(
       capability: plan.capability as never,
       action: input.approval.action as never,
       approvalId: input.approval.id,
-      payload: { body: input.approval.summary },
+      // The deliverable, not the approval summary.
+      //
+      // The summary is what the founder decides on, and it carries 확인하실 것
+      // — notes written for them alone. Sending that as the outbound body would
+      // publish the company's internal checklist to a customer's review page,
+      // and would send text that differs from what /work shows as the
+      // deliverable. Falls back to the summary only when a gateway-raised
+      // approval has no task behind it.
+      payload: { body: task?.deliverable ?? input.approval.summary },
     },
     { allowedCapabilities: new Set([plan.capability]), clearance: 'CONFIDENTIAL' },
   );
@@ -150,7 +159,10 @@ async function close(
     companyId: input.companyId,
     actor: input.userId,
     action: `WORK:SETTLE:${status}`,
-    outcome: status === 'DONE' ? 'EXECUTED' : 'DENIED',
+    // Three different things, and DENIED for all but one read as the system
+    // refusing something the founder had just approved. CANCELLED is their
+    // decision; BLOCKED is us trying and not managing it.
+    outcome: status === 'DONE' ? 'EXECUTED' : status === 'CANCELLED' ? 'ALLOWED' : 'FAILED',
     reason: detail,
   });
 

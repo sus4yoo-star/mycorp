@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { divisionMeta, type Division } from '@mycorp24/agent-types';
 import { formatAddress } from '@mycorp24/business-logic';
@@ -64,29 +65,39 @@ const when = (iso: string): string =>
 async function resolve(formData: FormData) {
   'use server';
 
+  // Every exit below either does the thing or says why. A bare `return` here
+  // means the founder clicks and nothing happens, with nothing on screen —
+  // indistinguishable from the button being broken.
   const user = await getSessionUser();
-  if (!user) return;
+  if (!user) redirect('/login?next=/work');
 
   const taskId = String(formData.get('taskId') ?? '');
   const outcome = String(formData.get('outcome') ?? '') === 'HANDLED' ? 'HANDLED' : 'DROPPED';
 
   const db = await getServerClient();
   const current = await getCurrentCompany(db, user.id);
-  if (!current) return;
+  if (!current) redirect('/onboarding');
 
-  await resolveBlockedTask(db, {
+  const detail =
+    outcome === 'HANDLED' ? '회장님이 직접 처리하셨습니다.' : '회장님이 접으셨습니다.';
+  const settled = await resolveBlockedTask(db, {
     taskId,
     companyId: current.companyId,
     outcome,
-    detail: outcome === 'HANDLED' ? '회장님이 직접 처리하셨습니다.' : '회장님이 접으셨습니다.',
+    detail,
   });
 
   await appendAuditEvent(db, {
     companyId: current.companyId,
     actor: user.id,
     action: `WORK:FOUNDER:${outcome}`,
-    outcome: outcome === 'HANDLED' ? 'EXECUTED' : 'DENIED',
-    reason: taskId,
+    // ALLOWED, not EXECUTED: the company executed nothing here. Either the
+    // founder did it themselves or they dropped it, and both are decisions the
+    // audit office should be able to tell apart from work the company did.
+    outcome: 'ALLOWED',
+    // The task's name, because this field is read as a reason. It held the
+    // uuid, which tells whoever reads the trail nothing at all.
+    reason: `${settled.title} — ${detail}`,
   });
 
   revalidatePath('/work');
@@ -105,15 +116,21 @@ async function retry(formData: FormData) {
   'use server';
 
   const user = await getSessionUser();
-  if (!user) return;
+  if (!user) redirect('/login?next=/work');
 
   const taskId = String(formData.get('taskId') ?? '');
-  const instruction = String(formData.get('instruction') ?? '').trim();
-  if (!instruction) return;
 
   const db = await getServerClient();
   const current = await getCurrentCompany(db, user.id);
-  if (!current) return;
+  if (!current) redirect('/onboarding');
+
+  // The instruction comes from the task row, not from a hidden input. The id
+  // is company-scoped; the text was not, so the client could have sent any
+  // instruction — and a paid model call — while the audit trail recorded
+  // "회장님이 다시 지시하셨습니다" about the original.
+  const original = (await listOpenTasks(db, current.companyId)).find((t) => t.id === taskId);
+  const instruction = original?.instruction?.trim();
+  if (!instruction) redirect('/work?error=gone');
 
   // Order matters. Cancelling first and then failing to place the work would
   // delete the only record that the founder ever asked for it — the exact
@@ -195,7 +212,6 @@ function Task({ task }: { task: TaskRow }) {
       {task.status === 'BLOCKED' && task.instruction && (
         <form action={retry} style={{ marginTop: '0.5rem' }}>
           <input type="hidden" name="taskId" value={task.id} />
-          <input type="hidden" name="instruction" value={task.instruction} />
           <button type="submit" className="ghost">다시 지시하기</button>
         </form>
       )}
@@ -214,7 +230,31 @@ function Task({ task }: { task: TaskRow }) {
 // new one — the worst of both.
 export const maxDuration = 120;
 
-export default async function WorkPage() {
+/**
+ * What the founder is told at the top of the screen.
+ *
+ * Blocked work was counted as 진행 중, so three stopped tasks read as
+ * "진행 중인 업무 3건입니다" directly above three cards labelled 중단 — the
+ * inflated in-hand count that `resolveBlockedTask` exists to stop, printed in
+ * the header of the page that fixes it.
+ */
+function headline(addr: string, tasks: readonly TaskRow[]): string {
+  const stopped = tasks.filter((t) => t.status === 'BLOCKED').length;
+  const running = tasks.length - stopped;
+
+  if (running === 0 && stopped === 0) {
+    return `${addr}, 진행 중인 업무는 없습니다. 비서실장에게 지시하시면 시작됩니다.`;
+  }
+  if (stopped === 0) return `${addr}, 진행 중인 업무 ${running}건입니다.`;
+  if (running === 0) return `${addr}, 멈춘 업무가 ${stopped}건 있습니다.`;
+  return `${addr}, 진행 중 ${running}건, 멈춘 업무 ${stopped}건입니다.`;
+}
+
+export default async function WorkPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   if (!isSupabaseConfigured()) return <SetupNotice what="업무" />;
 
   const user = await getSessionUser();
@@ -243,11 +283,13 @@ export default async function WorkPage() {
   return (
     <main className="wrap" style={{ paddingBlock: '3rem', maxWidth: '46rem' }}>
       <h1 style={{ fontSize: '1.6rem', margin: '0 0 0.35rem' }}>업무</h1>
-      <p style={{ color: 'var(--ink-soft)', margin: '0 0 2rem' }}>
-        {open.length > 0
-          ? `${addr}, 진행 중인 업무 ${open.length}건입니다.`
-          : `${addr}, 진행 중인 업무는 없습니다. 비서실장에게 지시하시면 시작됩니다.`}
-      </p>
+
+      {(await searchParams).error === 'gone' && (
+        <p className="hint error" style={{ margin: '0 0 1rem' }}>
+          그 업무를 찾지 못했습니다. 이미 정리되었을 수 있습니다.
+        </p>
+      )}
+      <p style={{ color: 'var(--ink-soft)', margin: '0 0 2rem' }}>{headline(addr, ordered)}</p>
 
       {ordered.map((t) => <Task key={t.id} task={t} />)}
 

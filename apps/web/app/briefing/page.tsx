@@ -98,8 +98,12 @@ export default async function Briefing({
   const current = await getCurrentCompany(db, user.id);
   if (!current) redirect('/onboarding');
 
-  // "밤사이" means the last day, measured rather than assumed.
-  const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+  // "밤사이" means since the founder's last day ended, not a rolling 24 hours.
+  //
+  // A rolling window reported Tuesday afternoon's work again on Wednesday
+  // morning as having happened overnight — the same three tasks counted twice,
+  // the second time under a sentence that was simply false.
+  const since = new Date(seoulDayStart().getTime() - 6 * 3_600_000).toISOString();
 
   const [approvals, founderTasks, signals, competitors, proposals, work, today, open] =
     await Promise.all([
@@ -116,6 +120,7 @@ export default async function Briefing({
   // The one problem worth naming in an evening report: work that stopped and
   // said why. Newest first, because that is the one still fresh.
   const stuck = open.find((t) => t.status === 'BLOCKED' && t.detail);
+  const blocked = open.filter((t) => t.status === 'BLOCKED').length;
 
   const competitorName = new Map(competitors.map((c) => [c.id, c.name]));
 
@@ -173,7 +178,10 @@ export default async function Briefing({
         // would hide work the company actually finished overnight.
         agentTasksCompleted: work.completed,
         activeAgents: work.agents,
-        blockedWork: work.blocked,
+        // Everything stuck right now, not what became stuck in the last day.
+        // The sentence is present tense; a 24-hour delta under it said nothing
+        // at all about four tasks that had been blocked since Monday.
+        blockedWork: blocked,
         competitorChanges: changes,
         proposals: proposalSummaries,
         momentum,
